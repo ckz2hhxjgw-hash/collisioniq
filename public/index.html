@@ -4,52 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CollisionIQ by Lytx</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; }
+    body { font-family: 'Lato', sans-serif; background: #ECECEC; color: #1B2431; }
     .screen { display: none; flex-direction: column; min-height: 100vh; padding-top: 64px; }
     .screen.active { display: flex; }
-    .btn-primary { background: #1F4E79; color: white; border-radius: 12px; padding: 16px 24px; font-size: 17px; font-weight: 600; width: 100%; border: none; cursor: pointer; transition: background 0.15s; }
-    .btn-primary:active { background: #163a5a; }
-    .btn-secondary { background: white; color: #1F4E79; border: 2px solid #1F4E79; border-radius: 12px; padding: 14px 24px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; transition: all 0.15s; }
-    .btn-secondary:active { background: #edf4fb; }
-    .btn-danger { background: #dc2626; color: white; border-radius: 12px; padding: 16px 24px; font-size: 17px; font-weight: 600; width: 100%; border: none; cursor: pointer; }
-    .btn-ghost { background: transparent; color: #6b7280; border: none; padding: 12px 24px; font-size: 15px; cursor: pointer; width: 100%; }
-    .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-    .badge { display: inline-flex; align-items: center; gap: 4px; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .btn-primary { background: #4C84FF; color: white; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; border: none; cursor: pointer; transition: background 0.15s; letter-spacing: 0.2px; }
+    .btn-primary:active { background: #3a6fd4; }
+    .btn-secondary { background: white; color: #4C84FF; border: 2px solid #4C84FF; border-radius: 8px; padding: 14px 24px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.15s; }
+    .btn-secondary:active { background: #E5EEF2; }
+    .btn-danger { background: #dc2626; color: white; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; border: none; cursor: pointer; }
+    .btn-ghost { background: transparent; color: #667892; border: none; padding: 12px 24px; font-size: 14px; cursor: pointer; width: 100%; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(27,36,49,0.08); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; background: #E5EEF2; color: #4C84FF; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
     .badge-red { background: #fee2e2; color: #dc2626; }
     .badge-green { background: #dcfce7; color: #16a34a; }
     .badge-orange { background: #fff7ed; color: #c2410c; }
-    .progress-bar { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #1F4E79; border-radius: 2px; transition: width 0.4s ease; }
-    .telemetry-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .progress-bar { height: 4px; background: #E5EEF2; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #4C84FF; border-radius: 2px; transition: width 0.4s ease; }
+    .telemetry-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E5EEF2; }
     .telemetry-row:last-child { border-bottom: none; }
-    .photo-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; }
+    .photo-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 2px solid #E5EEF2; }
     .photo-check { width: 64px; height: 64px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 2px solid #16a34a; }
     .photo-pending { width: 64px; height: 64px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px dashed #cbd5e1; }
-    input[type="text"], input[type="tel"], select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 16px; outline: none; transition: border-color 0.15s; background: white; }
-    input[type="text"]:focus, input[type="tel"]:focus, select:focus { border-color: #1F4E79; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #dbeafe; border-top-color: #1F4E79; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+    input[type="text"], input[type="tel"], select { width: 100%; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 12px 14px; font-size: 16px; outline: none; transition: border-color 0.15s; background: white; font-family: 'Lato', sans-serif; color: #1B2431; }
+    input[type="text"]:focus, input[type="tel"]:focus, select:focus { border-color: #4C84FF; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E5EEF2; border-top-color: #4C84FF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .fade-in { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .pulse { animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    .safety-btn { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px 20px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: left; display: flex; align-items: center; gap: 12px; }
-    .safety-btn:active { background: #f0f9ff; border-color: #1F4E79; }
-    .safety-btn.selected { background: #eff6ff; border-color: #1F4E79; color: #1F4E79; }
-    .report-text { background: #f8fafc; border-radius: 12px; padding: 16px; font-size: 14px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
+    .safety-btn { background: white; border: 2px solid #E5EEF2; border-radius: 8px; padding: 14px 20px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; text-align: left; display: flex; align-items: center; gap: 12px; color: #1B2431; }
+    .safety-btn:active { background: #E5EEF2; border-color: #4C84FF; }
+    .safety-btn.selected { background: #E5EEF2; border-color: #4C84FF; color: #4C84FF; }
+    .report-text { background: #f8fafc; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #1B2431; white-space: pre-wrap; }
   </style>
 </head>
 <body>
 
 <!-- ═══ HEADER ═══ -->
-<header style="background:#1F4E79; position:fixed; top:0; left:0; right:0; z-index:100; height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+<header style="background:#1B2431; position:fixed; top:0; left:0; right:0; z-index:100; height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
   <div style="display:flex; align-items:center; gap:10px;">
-    <div style="width:32px; height:32px; background:#2E75B6; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px;">⚡</div>
+    <div style="width:32px; height:32px; background:#4C84FF; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px;">⚡</div>
     <div>
-      <div style="color:white; font-weight:700; font-size:17px; line-height:1.1;">CollisionIQ</div>
-      <div style="color:#93c5fd; font-size:11px;">by Lytx</div>
+      <div style="color:white; font-weight:700; font-size:18px; line-height:1.1; letter-spacing:-0.3px;">CollisionIQ</div>
+      <div style="color:rgba(255,255,255,0.45); font-size:11px; font-weight:400; letter-spacing:0.5px;">by Lytx</div>
     </div>
   </div>
   <div id="headerRight" style="display:flex; align-items:center; gap:8px;"></div>
@@ -62,33 +64,33 @@
     <!-- Alert Banner -->
     <div style="background:#dc2626; border-radius:16px; padding:20px; margin-bottom:20px; color:white; text-align:center;">
       <div style="font-size:40px; margin-bottom:8px;">🚨</div>
-      <div style="font-size:22px; font-weight:700; margin-bottom:4px;">Collision Detected</div>
+      <div style="font-size:18px; font-weight:700; margin-bottom:4px; letter-spacing:-0.2px;">Collision Detected</div>
       <div style="font-size:13px; opacity:0.85;">Lytx video and telemetry captured</div>
     </div>
 
     <!-- Event Details Card -->
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <div style="font-weight:700; font-size:16px; color:#1F4E79;">Event Details</div>
+        <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px;">Event Details</div>
         <span class="badge">LTX-2026-03847</span>
       </div>
       <div class="telemetry-row">
-        <div style="color:#6b7280; font-size:14px;">📅 Date &amp; Time</div>
+        <div style="color:#667892; font-size:14px;">📅 Date &amp; Time</div>
         <div style="font-weight:600; font-size:14px;">Mar 24, 2026 · 2:47 PM</div>
       </div>
       <div class="telemetry-row">
-        <div style="color:#6b7280; font-size:14px;">📍 Location</div>
-        <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#6b7280;">Las Vegas, NV</span></div>
+        <div style="color:#667892; font-size:14px;">📍 Location</div>
+        <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#667892;">Las Vegas, NV</span></div>
       </div>
       <div class="telemetry-row">
-        <div style="color:#6b7280; font-size:14px;">🚛 Vehicle</div>
-        <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#6b7280;">2023 Ford F-150</span></div>
+        <div style="color:#667892; font-size:14px;">🚛 Vehicle</div>
+        <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#667892;">2023 Ford F-150</span></div>
       </div>
     </div>
 
     <!-- Impact Data Card -->
     <div class="card" style="margin-bottom:24px;">
-      <div style="font-weight:700; font-size:16px; color:#1F4E79; margin-bottom:14px;">Impact Data</div>
+      <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Impact Data</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center;">
           <div style="font-size:26px; font-weight:700; color:#c2410c;">34</div>
@@ -114,13 +116,13 @@
 
     <div style="text-align:center; margin-bottom:24px;">
       <div style="font-size:48px; margin-bottom:12px;">🛡️</div>
-      <div style="font-size:22px; font-weight:700; color:#1F4E79; margin-bottom:8px;">Safety First</div>
-      <div style="color:#6b7280; font-size:15px; line-height:1.5;">Before documenting the scene, let's make sure everyone is safe.</div>
+      <div style="font-size:18px; font-weight:700; color:#4C84FF; margin-bottom:8px;">Safety First</div>
+      <div style="color:#667892; font-size:15px; line-height:1.5;">Before documenting the scene, let's make sure everyone is safe.</div>
     </div>
 
     <!-- Q1 -->
     <div class="card" id="safetyQ1">
-      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Are you physically okay?</div>
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Are you physically okay?</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <button class="safety-btn" onclick="answerSafety(1, 'yes', this)">
           <span>✅</span> Yes, I'm okay
@@ -133,7 +135,7 @@
 
     <!-- Q2 (hidden until Q1 answered) -->
     <div class="card" id="safetyQ2" style="display:none; opacity:0; transition:opacity 0.3s;">
-      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Are any other parties injured?</div>
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Are any other parties injured?</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <button class="safety-btn" onclick="answerSafety(2, 'no', this)">
           <span>✅</span> Everyone appears okay
@@ -146,7 +148,7 @@
 
     <!-- Q3 (hidden until Q2 answered) -->
     <div class="card" id="safetyQ3" style="display:none; opacity:0; transition:opacity 0.3s;">
-      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Is your vehicle in a safe position?</div>
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Is your vehicle in a safe position?</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <button class="safety-btn" onclick="answerSafety(3, 'safe', this)">
           <span>✅</span> Yes, safely stopped
@@ -162,7 +164,7 @@
       <div style="background:#fef2f2; border:2px solid #fca5a5; border-radius:12px; padding:16px; text-align:center;">
         <div style="font-size:32px; margin-bottom:8px;">🚑</div>
         <div style="font-weight:700; color:#dc2626; font-size:16px; margin-bottom:6px;">Call 911 First</div>
-        <div style="color:#6b7280; font-size:14px; margin-bottom:16px;">Ensure everyone's safety before documenting. Return to CollisionIQ when you're safe.</div>
+        <div style="color:#667892; font-size:14px; margin-bottom:16px;">Ensure everyone's safety before documenting. Return to CollisionIQ when you're safe.</div>
         <button class="btn-danger" onclick="callEmergency()" style="margin-bottom:10px;">📞 Call 911</button>
         <button class="btn-ghost" onclick="goToScreen(3)" style="font-size:14px; color:#9ca3af;">Continue to documentation anyway</button>
       </div>
@@ -187,8 +189,8 @@
     <!-- Progress -->
     <div style="margin-bottom:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <div style="font-size:15px; font-weight:600; color:#1F4E79;">Evidence Collection</div>
-        <div style="font-size:13px; color:#6b7280;"><span id="photoStepNum">1</span> of 7 photos</div>
+        <div style="font-size:15px; font-weight:600; color:#4C84FF;">Evidence Collection</div>
+        <div style="font-size:13px; color:#667892;"><span id="photoStepNum">1</span> of 7 photos</div>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" id="photoProgress" style="width:0%"></div>
@@ -199,13 +201,13 @@
     <div class="card" style="flex:1; display:flex; flex-direction:column; margin-bottom:16px;">
       <div style="margin-bottom:16px;">
         <span class="badge badge-orange" id="photoBadge">Photo 1 of 7</span>
-        <div style="font-size:19px; font-weight:700; color:#1e293b; margin-top:10px;" id="photoStepLabel">Your vehicle — driver side</div>
+        <div style="font-size:18px; font-weight:700; color:#1B2431; margin-top:10px;" id="photoStepLabel">Your vehicle — driver side</div>
       </div>
 
       <!-- AI Hint -->
-      <div style="background:#eff6ff; border-radius:10px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+      <div style="background:#E5EEF2; border-radius:8px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
         <span style="font-size:18px; flex-shrink:0;">💡</span>
-        <div style="font-size:14px; color:#1e40af; line-height:1.5;" id="photoHint">Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.</div>
+        <div style="font-size:14px; color:#4C84FF; line-height:1.5; font-weight:400;" id="photoHint">Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.</div>
       </div>
 
       <!-- Photo capture area -->
@@ -239,13 +241,13 @@
   <div class="fade-in" style="padding:20px; flex:1;">
 
     <div style="margin-bottom:20px;">
-      <div style="font-size:22px; font-weight:700; color:#1F4E79; margin-bottom:6px;">Other Party Details</div>
-      <div style="color:#6b7280; font-size:14px;">Capture as much as you can. All fields are optional.</div>
+      <div style="font-size:18px; font-weight:700; color:#4C84FF; margin-bottom:6px;">Other Party Details</div>
+      <div style="color:#667892; font-size:14px;">Capture as much as you can. All fields are optional.</div>
     </div>
 
     <!-- Other Driver -->
     <div class="card">
-      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Other Driver</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Other Driver</div>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opName" placeholder="Full name" />
         <input type="text" id="opLicense" placeholder="Driver's license number" />
@@ -256,7 +258,7 @@
 
     <!-- Vehicle -->
     <div class="card">
-      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Vehicle</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Vehicle</div>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opPlate" placeholder="License plate number" />
         <input type="text" id="opMake" placeholder="Make and model (e.g. Toyota Camry)" />
@@ -266,7 +268,7 @@
 
     <!-- Insurance -->
     <div class="card">
-      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Insurance</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Insurance</div>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opInsurer" placeholder="Insurance company" />
         <input type="text" id="opPolicy" placeholder="Policy number" />
@@ -276,7 +278,7 @@
 
     <!-- Police Report -->
     <div class="card" style="margin-bottom:24px;">
-      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Police Report (if applicable)</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Police Report (if applicable)</div>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="policeReport" placeholder="Report number" />
         <input type="text" id="policeBadge" placeholder="Officer badge number" />
@@ -296,17 +298,17 @@
 
     <div style="margin-bottom:20px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-        <div style="font-size:22px; font-weight:700; color:#1F4E79;">Incident Report</div>
+        <div style="font-size:18px; font-weight:700; color:#4C84FF;">Incident Report</div>
         <span class="badge">LTX-2026-03847</span>
       </div>
-      <div style="color:#6b7280; font-size:13px;" id="reportTimestamp"></div>
+      <div style="color:#667892; font-size:13px;" id="reportTimestamp"></div>
     </div>
 
     <!-- Loading State -->
     <div id="reportLoading" class="card" style="text-align:center; padding:40px;">
       <div class="spinner" style="margin-bottom:16px;"></div>
-      <div style="font-weight:600; color:#1F4E79; font-size:16px; margin-bottom:6px;">Generating your report…</div>
-      <div style="color:#6b7280; font-size:14px;">CollisionIQ AI is analyzing your evidence</div>
+      <div style="font-weight:600; color:#4C84FF; font-size:16px; margin-bottom:6px;">Generating your report…</div>
+      <div style="color:#667892; font-size:14px;">CollisionIQ AI is analyzing your evidence</div>
     </div>
 
     <!-- Report Content (shown after generation) -->
@@ -314,31 +316,31 @@
 
       <!-- Narrative -->
       <div class="card" style="margin-bottom:12px;">
-        <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">AI-Generated Narrative</div>
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">AI-Generated Narrative</div>
         <div class="report-text" id="reportNarrative"></div>
       </div>
 
       <!-- Event Summary -->
       <div class="card" style="margin-bottom:12px;">
-        <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Event Summary</div>
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Event Summary</div>
         <div class="telemetry-row">
-          <div style="color:#6b7280; font-size:13px;">Date &amp; Time</div>
+          <div style="color:#667892; font-size:13px;">Date &amp; Time</div>
           <div style="font-size:13px; font-weight:600;">Mar 24, 2026 · 2:47 PM</div>
         </div>
         <div class="telemetry-row">
-          <div style="color:#6b7280; font-size:13px;">Location</div>
+          <div style="color:#667892; font-size:13px;">Location</div>
           <div style="font-size:13px; font-weight:600;">I-15 N, Exit 42, Las Vegas NV</div>
         </div>
         <div class="telemetry-row">
-          <div style="color:#6b7280; font-size:13px;">Vehicle</div>
+          <div style="color:#667892; font-size:13px;">Vehicle</div>
           <div style="font-size:13px; font-weight:600;">Unit #4821 — 2023 Ford F-150</div>
         </div>
         <div class="telemetry-row">
-          <div style="color:#6b7280; font-size:13px;">Speed at Impact</div>
+          <div style="color:#667892; font-size:13px;">Speed at Impact</div>
           <div style="font-size:13px; font-weight:600; color:#c2410c;">34 mph</div>
         </div>
         <div class="telemetry-row">
-          <div style="color:#6b7280; font-size:13px;">G-Force</div>
+          <div style="color:#667892; font-size:13px;">G-Force</div>
           <div style="font-size:13px; font-weight:600; color:#dc2626;">8.2g (Severe)</div>
         </div>
       </div>
@@ -352,7 +354,7 @@
       <!-- Actions -->
       <button class="btn-primary" onclick="submitReport()" style="margin-bottom:10px;">✅ Submit to Fleet Manager</button>
       <button class="btn-secondary" onclick="shareReport()" style="margin-bottom:10px;">🔗 Copy Share Link</button>
-      <button class="btn-ghost" style="color:#6b7280; font-size:14px;" onclick="startOver()">Start New Report</button>
+      <button class="btn-ghost" style="color:#667892; font-size:14px;" onclick="startOver()">Start New Report</button>
 
     </div>
 
@@ -360,7 +362,7 @@
 </div>
 
 <!-- ═══ SUCCESS TOAST ═══ -->
-<div id="toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1F4E79; color:white; padding:12px 24px; border-radius:50px; font-size:14px; font-weight:600; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.2); white-space:nowrap;"></div>
+<div id="toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1B2431; color:white; padding:12px 24px; border-radius:50px; font-size:14px; font-weight:700; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.25); white-space:nowrap; letter-spacing:0.2px;"></div>
 
 <script>
 // ═══════════════════════════
@@ -404,7 +406,7 @@ function updateHeader(n) {
   if (n === 1) {
     right.innerHTML = '<span style="background:#dc2626; color:white; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">LIVE EVENT</span>';
   } else if (n < 5) {
-    right.innerHTML = `<span style="color:#93c5fd; font-size:13px; font-weight:600;">Step ${n-1} of 4</span>`;
+    right.innerHTML = `<span style="color:rgba(255,255,255,0.6); font-size:13px; font-weight:700; letter-spacing:0.3px;">Step ${n-1} of 4</span>`;
   } else {
     right.innerHTML = '<span style="background:#dcfce7; color:#15803d; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">COMPLETE</span>';
   }
@@ -626,38 +628,38 @@ function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeRep
   // Evidence summary
   const evidenceCard = document.getElementById('evidenceSummaryCard');
   evidenceCard.innerHTML = `
-    <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
+    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Photos captured</div>
+      <div style="color:#667892; font-size:13px;">Photos captured</div>
       <div style="font-size:13px; font-weight:600;">${photoCount} of 7</div>
     </div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Lytx video clip</div>
+      <div style="color:#667892; font-size:13px;">Lytx video clip</div>
       <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
     </div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Telemetry data</div>
+      <div style="color:#667892; font-size:13px;">Telemetry data</div>
       <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
     </div>`;
 
   // Other party summary
   const opCard = document.getElementById('otherPartySummaryCard');
   opCard.innerHTML = `
-    <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
+    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Name</div>
+      <div style="color:#667892; font-size:13px;">Name</div>
       <div style="font-size:13px; font-weight:600;">${opName}</div>
     </div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">License Plate</div>
+      <div style="color:#667892; font-size:13px;">License Plate</div>
       <div style="font-size:13px; font-weight:600;">${opPlate}</div>
     </div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Insurance</div>
+      <div style="color:#667892; font-size:13px;">Insurance</div>
       <div style="font-size:13px; font-weight:600;">${opInsurer}</div>
     </div>
     <div class="telemetry-row">
-      <div style="color:#6b7280; font-size:13px;">Police Report</div>
+      <div style="color:#667892; font-size:13px;">Police Report</div>
       <div style="font-size:13px; font-weight:600;">${policeReport}</div>
     </div>`;
 }
