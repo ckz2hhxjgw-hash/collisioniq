@@ -39,9 +39,670 @@
     .safety-btn:active { background: #f0f9ff; border-color: #1F4E79; }
     .safety-btn.selected { background: #eff6ff; border-color: #1F4E79; color: #1F4E79; }
     .report-text { background: #f8fafc; border-radius: 12px; padding: 16px; font-size: 14px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
-  
-  
-  
-  
-  </style>
+  </style>
 </head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header style="background:#1F4E79; position:fixed; top:0; left:0; right:0; z-index:100; height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div style="width:32px; height:32px; background:#2E75B6; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px;">⚡</div>
+    <div>
+      <div style="color:white; font-weight:700; font-size:17px; line-height:1.1;">CollisionIQ</div>
+      <div style="color:#93c5fd; font-size:11px;">by Lytx</div>
+    </div>
+  </div>
+  <div id="headerRight" style="display:flex; align-items:center; gap:8px;"></div>
+</header>
+
+<!-- ═══ SCREEN 1: COLLISION ALERT ═══ -->
+<div id="screen1" class="screen active">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <!-- Alert Banner -->
+    <div style="background:#dc2626; border-radius:16px; padding:20px; margin-bottom:20px; color:white; text-align:center;">
+      <div style="font-size:40px; margin-bottom:8px;">🚨</div>
+      <div style="font-size:22px; font-weight:700; margin-bottom:4px;">Collision Detected</div>
+      <div style="font-size:13px; opacity:0.85;">Lytx video and telemetry captured</div>
+    </div>
+
+    <!-- Event Details Card -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="font-weight:700; font-size:16px; color:#1F4E79;">Event Details</div>
+        <span class="badge">LTX-2026-03847</span>
+      </div>
+      <div class="telemetry-row">
+        <div style="color:#6b7280; font-size:14px;">📅 Date &amp; Time</div>
+        <div style="font-weight:600; font-size:14px;">Mar 24, 2026 · 2:47 PM</div>
+      </div>
+      <div class="telemetry-row">
+        <div style="color:#6b7280; font-size:14px;">📍 Location</div>
+        <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#6b7280;">Las Vegas, NV</span></div>
+      </div>
+      <div class="telemetry-row">
+        <div style="color:#6b7280; font-size:14px;">🚛 Vehicle</div>
+        <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#6b7280;">2023 Ford F-150</span></div>
+      </div>
+    </div>
+
+    <!-- Impact Data Card -->
+    <div class="card" style="margin-bottom:24px;">
+      <div style="font-weight:700; font-size:16px; color:#1F4E79; margin-bottom:14px;">Impact Data</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:26px; font-weight:700; color:#c2410c;">34</div>
+          <div style="font-size:11px; color:#9a3412; font-weight:600;">MPH AT IMPACT</div>
+        </div>
+        <div style="background:#fef2f2; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:26px; font-weight:700; color:#dc2626;">8.2g</div>
+          <div style="font-size:11px; color:#991b1b; font-weight:600;">G-FORCE (SEVERE)</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="goToScreen(2)" style="margin-bottom:12px;">
+      Begin Incident Report →
+    </button>
+    <button class="btn-ghost" onclick="dismissAlert()">Not a collision — Dismiss</button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: SAFETY CHECK ═══ -->
+<div id="screen2" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <div style="text-align:center; margin-bottom:24px;">
+      <div style="font-size:48px; margin-bottom:12px;">🛡️</div>
+      <div style="font-size:22px; font-weight:700; color:#1F4E79; margin-bottom:8px;">Safety First</div>
+      <div style="color:#6b7280; font-size:15px; line-height:1.5;">Before documenting the scene, let's make sure everyone is safe.</div>
+    </div>
+
+    <!-- Q1 -->
+    <div class="card" id="safetyQ1">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Are you physically okay?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(1, 'yes', this)">
+          <span>✅</span> Yes, I'm okay
+        </button>
+        <button class="safety-btn" onclick="answerSafety(1, 'no', this)">
+          <span>🆘</span> I need medical attention
+        </button>
+      </div>
+    </div>
+
+    <!-- Q2 (hidden until Q1 answered) -->
+    <div class="card" id="safetyQ2" style="display:none; opacity:0; transition:opacity 0.3s;">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Are any other parties injured?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(2, 'no', this)">
+          <span>✅</span> Everyone appears okay
+        </button>
+        <button class="safety-btn" onclick="answerSafety(2, 'yes', this)">
+          <span>🆘</span> Someone may be injured
+        </button>
+      </div>
+    </div>
+
+    <!-- Q3 (hidden until Q2 answered) -->
+    <div class="card" id="safetyQ3" style="display:none; opacity:0; transition:opacity 0.3s;">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1e293b;">Is your vehicle in a safe position?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(3, 'safe', this)">
+          <span>✅</span> Yes, safely stopped
+        </button>
+        <button class="safety-btn" onclick="answerSafety(3, 'unsafe', this)">
+          <span>⚠️</span> Vehicle is blocking traffic
+        </button>
+      </div>
+    </div>
+
+    <!-- Emergency message (shown if someone is injured) -->
+    <div id="emergencyMsg" style="display:none;" class="card" style="background:#fef2f2; border:2px solid #fca5a5;">
+      <div style="background:#fef2f2; border:2px solid #fca5a5; border-radius:12px; padding:16px; text-align:center;">
+        <div style="font-size:32px; margin-bottom:8px;">🚑</div>
+        <div style="font-weight:700; color:#dc2626; font-size:16px; margin-bottom:6px;">Call 911 First</div>
+        <div style="color:#6b7280; font-size:14px; margin-bottom:16px;">Ensure everyone's safety before documenting. Return to CollisionIQ when you're safe.</div>
+        <button class="btn-danger" onclick="callEmergency()" style="margin-bottom:10px;">📞 Call 911</button>
+        <button class="btn-ghost" onclick="goToScreen(3)" style="font-size:14px; color:#9ca3af;">Continue to documentation anyway</button>
+      </div>
+    </div>
+
+    <!-- Proceed button (shown after all answered safely) -->
+    <div id="safetyProceed" style="display:none;">
+      <div class="card" style="background:#f0fdf4; border:2px solid #86efac; text-align:center; padding:16px; margin-bottom:16px;">
+        <div style="font-size:28px; margin-bottom:6px;">✅</div>
+        <div style="font-weight:600; color:#15803d; font-size:15px;">Good. Let's document the scene.</div>
+      </div>
+      <button class="btn-primary" onclick="goToScreen(3)">Capture Evidence →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: EVIDENCE COLLECTION ═══ -->
+<div id="screen3" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1; display:flex; flex-direction:column;">
+
+    <!-- Progress -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-size:15px; font-weight:600; color:#1F4E79;">Evidence Collection</div>
+        <div style="font-size:13px; color:#6b7280;"><span id="photoStepNum">1</span> of 7 photos</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="photoProgress" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Current Step Card -->
+    <div class="card" style="flex:1; display:flex; flex-direction:column; margin-bottom:16px;">
+      <div style="margin-bottom:16px;">
+        <span class="badge badge-orange" id="photoBadge">Photo 1 of 7</span>
+        <div style="font-size:19px; font-weight:700; color:#1e293b; margin-top:10px;" id="photoStepLabel">Your vehicle — driver side</div>
+      </div>
+
+      <!-- AI Hint -->
+      <div style="background:#eff6ff; border-radius:10px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+        <span style="font-size:18px; flex-shrink:0;">💡</span>
+        <div style="font-size:14px; color:#1e40af; line-height:1.5;" id="photoHint">Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.</div>
+      </div>
+
+      <!-- Photo capture area -->
+      <div id="photoCaptureArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;">
+        <div id="photoPreview" style="width:200px; height:150px; background:#f1f5f9; border-radius:12px; display:flex; align-items:center; justify-content:center; border:2px dashed #cbd5e1; overflow:hidden;">
+          <div style="text-align:center; color:#94a3b8;">
+            <div style="font-size:36px; margin-bottom:4px;">📷</div>
+            <div style="font-size:12px;">No photo yet</div>
+          </div>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoCapture(event)">
+        <button class="btn-primary" onclick="document.getElementById('photoInput').click()" style="max-width:220px;">📷 Take Photo</button>
+        <button class="btn-ghost" style="font-size:13px; color:#94a3b8;" onclick="useMockPhoto()">Use sample photo (demo)</button>
+      </div>
+    </div>
+
+    <!-- Captured Photos Strip -->
+    <div id="photoStrip" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; min-height:72px;"></div>
+
+    <!-- Navigation -->
+    <div style="display:flex; gap:10px;">
+      <button class="btn-ghost" style="width:auto; padding:14px 20px;" onclick="skipPhoto()">Skip</button>
+      <button class="btn-primary" id="photoNextBtn" style="opacity:0.4; pointer-events:none;" onclick="nextPhotoStep()">Next →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: OTHER PARTY INFO ═══ -->
+<div id="screen4" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:22px; font-weight:700; color:#1F4E79; margin-bottom:6px;">Other Party Details</div>
+      <div style="color:#6b7280; font-size:14px;">Capture as much as you can. All fields are optional.</div>
+    </div>
+
+    <!-- Other Driver -->
+    <div class="card">
+      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Other Driver</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opName" placeholder="Full name" />
+        <input type="text" id="opLicense" placeholder="Driver's license number" />
+        <input type="text" id="opLicenseState" placeholder="License state (e.g. NV)" />
+        <input type="tel" id="opPhone" placeholder="Phone number" />
+      </div>
+    </div>
+
+    <!-- Vehicle -->
+    <div class="card">
+      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Vehicle</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opPlate" placeholder="License plate number" />
+        <input type="text" id="opMake" placeholder="Make and model (e.g. Toyota Camry)" />
+        <input type="text" id="opColor" placeholder="Color" />
+      </div>
+    </div>
+
+    <!-- Insurance -->
+    <div class="card">
+      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Insurance</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opInsurer" placeholder="Insurance company" />
+        <input type="text" id="opPolicy" placeholder="Policy number" />
+        <input type="tel" id="opInsurerPhone" placeholder="Insurance phone number" />
+      </div>
+    </div>
+
+    <!-- Police Report -->
+    <div class="card" style="margin-bottom:24px;">
+      <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Police Report (if applicable)</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="policeReport" placeholder="Report number" />
+        <input type="text" id="policeBadge" placeholder="Officer badge number" />
+        <input type="tel" id="policePhone" placeholder="Police department phone" />
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="goToScreen(5)" style="margin-bottom:12px;">Generate FNOL Report →</button>
+    <button class="btn-ghost" onclick="goToScreen(5)">Skip — Generate Report Now</button>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 5: FNOL REPORT ═══ -->
+<div id="screen5" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+        <div style="font-size:22px; font-weight:700; color:#1F4E79;">Incident Report</div>
+        <span class="badge">LTX-2026-03847</span>
+      </div>
+      <div style="color:#6b7280; font-size:13px;" id="reportTimestamp"></div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="reportLoading" class="card" style="text-align:center; padding:40px;">
+      <div class="spinner" style="margin-bottom:16px;"></div>
+      <div style="font-weight:600; color:#1F4E79; font-size:16px; margin-bottom:6px;">Generating your report…</div>
+      <div style="color:#6b7280; font-size:14px;">CollisionIQ AI is analyzing your evidence</div>
+    </div>
+
+    <!-- Report Content (shown after generation) -->
+    <div id="reportContent" style="display:none;">
+
+      <!-- Narrative -->
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">AI-Generated Narrative</div>
+        <div class="report-text" id="reportNarrative"></div>
+      </div>
+
+      <!-- Event Summary -->
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Event Summary</div>
+        <div class="telemetry-row">
+          <div style="color:#6b7280; font-size:13px;">Date &amp; Time</div>
+          <div style="font-size:13px; font-weight:600;">Mar 24, 2026 · 2:47 PM</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#6b7280; font-size:13px;">Location</div>
+          <div style="font-size:13px; font-weight:600;">I-15 N, Exit 42, Las Vegas NV</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#6b7280; font-size:13px;">Vehicle</div>
+          <div style="font-size:13px; font-weight:600;">Unit #4821 — 2023 Ford F-150</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#6b7280; font-size:13px;">Speed at Impact</div>
+          <div style="font-size:13px; font-weight:600; color:#c2410c;">34 mph</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#6b7280; font-size:13px;">G-Force</div>
+          <div style="font-size:13px; font-weight:600; color:#dc2626;">8.2g (Severe)</div>
+        </div>
+      </div>
+
+      <!-- Evidence Summary -->
+      <div class="card" style="margin-bottom:12px;" id="evidenceSummaryCard"></div>
+
+      <!-- Other Party Summary -->
+      <div class="card" style="margin-bottom:20px;" id="otherPartySummaryCard"></div>
+
+      <!-- Actions -->
+      <button class="btn-primary" onclick="submitReport()" style="margin-bottom:10px;">✅ Submit to Fleet Manager</button>
+      <button class="btn-secondary" onclick="shareReport()" style="margin-bottom:10px;">🔗 Copy Share Link</button>
+      <button class="btn-ghost" style="color:#6b7280; font-size:14px;" onclick="startOver()">Start New Report</button>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SUCCESS TOAST ═══ -->
+<div id="toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1F4E79; color:white; padding:12px 24px; border-radius:50px; font-size:14px; font-weight:600; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.2); white-space:nowrap;"></div>
+
+<script>
+// ═══════════════════════════
+//  APP STATE
+// ═══════════════════════════
+const state = {
+  currentScreen: 1,
+  safetyQ1: null,
+  safetyQ2: null,
+  safetyQ3: null,
+  photos: [],
+  currentPhotoStep: 0,
+  reportGenerated: false
+};
+
+const EVIDENCE_STEPS = [
+  { label: 'Your vehicle — driver side', hint: 'Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.' },
+  { label: 'Your vehicle — damage close-up', hint: 'Move in close to document any dents, scratches, or broken parts on your vehicle clearly.' },
+  { label: 'Your vehicle — license plate', hint: 'Photograph your license plate straight-on so it is fully readable.' },
+  { label: 'Other vehicle — front', hint: 'Capture the full front of the other vehicle. Try to get their license plate in the same shot.' },
+  { label: 'Other vehicle — damage', hint: 'Document any visible damage on the other vehicle with a clear, close-up shot.' },
+  { label: 'Overall scene', hint: 'Step back and photograph the full accident scene, including both vehicles and road markings.' },
+  { label: 'Road conditions / signage', hint: 'Photograph any relevant signs, signals, traffic lights, or road conditions that may have contributed.' }
+];
+
+// ═══════════════════════════
+//  NAVIGATION
+// ═══════════════════════════
+function goToScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen${n}`).classList.add('active');
+  state.currentScreen = n;
+  window.scrollTo(0, 0);
+  updateHeader(n);
+  if (n === 3) initPhotoStep();
+  if (n === 5) initReport();
+}
+
+function updateHeader(n) {
+  const right = document.getElementById('headerRight');
+  if (n === 1) {
+    right.innerHTML = '<span style="background:#dc2626; color:white; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">LIVE EVENT</span>';
+  } else if (n < 5) {
+    right.innerHTML = `<span style="color:#93c5fd; font-size:13px; font-weight:600;">Step ${n-1} of 4</span>`;
+  } else {
+    right.innerHTML = '<span style="background:#dcfce7; color:#15803d; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">COMPLETE</span>';
+  }
+}
+
+// ═══════════════════════════
+//  SCREEN 1
+// ═══════════════════════════
+function dismissAlert() {
+  showToast('Event dismissed. Lytx telemetry saved.');
+}
+
+// ═══════════════════════════
+//  SCREEN 2: SAFETY
+// ═══════════════════════════
+function answerSafety(q, answer, btn) {
+  // Mark selected
+  const card = document.getElementById(`safetyQ${q}`);
+  card.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state[`safetyQ${q}`] = answer;
+
+  // Emergency if injured
+  if ((q === 1 && answer === 'no') || (q === 2 && answer === 'yes')) {
+    setTimeout(() => {
+      document.getElementById('emergencyMsg').style.display = 'block';
+    }, 300);
+    return;
+  }
+
+  // Show next question
+  setTimeout(() => {
+    if (q === 1) {
+      const q2 = document.getElementById('safetyQ2');
+      q2.style.display = 'block';
+      setTimeout(() => { q2.style.opacity = '1'; }, 50);
+    } else if (q === 2) {
+      const q3 = document.getElementById('safetyQ3');
+      q3.style.display = 'block';
+      setTimeout(() => { q3.style.opacity = '1'; }, 50);
+    } else if (q === 3) {
+      document.getElementById('safetyProceed').style.display = 'block';
+      if (answer === 'unsafe') {
+        showToast('⚠️ Move vehicle to shoulder if safe to do so');
+      }
+    }
+  }, 300);
+}
+
+function callEmergency() {
+  window.location.href = 'tel:911';
+}
+
+// ═══════════════════════════
+//  SCREEN 3: EVIDENCE
+// ═══════════════════════════
+function initPhotoStep() {
+  state.currentPhotoStep = 0;
+  state.photos = [];
+  renderPhotoStep();
+  renderPhotoStrip();
+}
+
+function renderPhotoStep() {
+  const step = EVIDENCE_STEPS[state.currentPhotoStep];
+  document.getElementById('photoStepNum').textContent = state.currentPhotoStep + 1;
+  document.getElementById('photoBadge').textContent = `Photo ${state.currentPhotoStep + 1} of 7`;
+  document.getElementById('photoStepLabel').textContent = step.label;
+  document.getElementById('photoHint').textContent = step.hint;
+
+  const pct = (state.currentPhotoStep / 7) * 100;
+  document.getElementById('photoProgress').style.width = pct + '%';
+
+  // Reset preview
+  document.getElementById('photoPreview').innerHTML = `
+    <div style="text-align:center; color:#94a3b8;">
+      <div style="font-size:36px; margin-bottom:4px;">📷</div>
+      <div style="font-size:12px;">No photo yet</div>
+    </div>`;
+
+  // Check if already have photo for this step
+  if (state.photos[state.currentPhotoStep]) {
+    showPhotoPreview(state.photos[state.currentPhotoStep]);
+    enableNext();
+  } else {
+    document.getElementById('photoNextBtn').style.opacity = '0.4';
+    document.getElementById('photoNextBtn').style.pointerEvents = 'none';
+  }
+
+  document.getElementById('photoInput').value = '';
+}
+
+function handlePhotoCapture(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  state.photos[state.currentPhotoStep] = { url, name: `Photo ${state.currentPhotoStep + 1}`, mock: false };
+  showPhotoPreview(url);
+  enableNext();
+  renderPhotoStrip();
+}
+
+function useMockPhoto() {
+  const mockColors = ['#dbeafe', '#dcfce7', '#fef9c3', '#fce7f3', '#ede9fe', '#ffedd5', '#f0fdf4'];
+  const c = mockColors[state.currentPhotoStep] || '#f1f5f9';
+  const mockUrl = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150'><rect width='200' height='150' fill='${encodeURIComponent(c)}'/><text x='100' y='75' font-family='sans-serif' font-size='13' fill='%23475569' text-anchor='middle' dominant-baseline='middle'>📷 Photo ${state.currentPhotoStep + 1}</text></svg>`;
+  state.photos[state.currentPhotoStep] = { url: mockUrl, name: `Photo ${state.currentPhotoStep + 1}`, mock: true };
+  showPhotoPreview(mockUrl);
+  enableNext();
+  renderPhotoStrip();
+  showToast('Sample photo added ✓');
+}
+
+function showPhotoPreview(urlOrObj) {
+  const url = typeof urlOrObj === 'string' ? urlOrObj : urlOrObj.url;
+  document.getElementById('photoPreview').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+}
+
+function enableNext() {
+  const btn = document.getElementById('photoNextBtn');
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+}
+
+function nextPhotoStep() {
+  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+    state.currentPhotoStep++;
+    renderPhotoStep();
+    renderPhotoStrip();
+  } else {
+    goToScreen(4);
+  }
+}
+
+function skipPhoto() {
+  state.photos[state.currentPhotoStep] = null;
+  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+    state.currentPhotoStep++;
+    renderPhotoStep();
+    renderPhotoStrip();
+  } else {
+    goToScreen(4);
+  }
+}
+
+function renderPhotoStrip() {
+  const strip = document.getElementById('photoStrip');
+  strip.innerHTML = '';
+  EVIDENCE_STEPS.forEach((step, i) => {
+    const p = state.photos[i];
+    const div = document.createElement('div');
+    div.style.flexShrink = '0';
+    div.style.position = 'relative';
+    if (p) {
+      div.innerHTML = `<img src="${p.url}" class="photo-thumb" title="${step.label}">
+        <div style="position:absolute;top:-4px;right:-4px;background:#16a34a;color:white;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;">✓</div>`;
+    } else if (i === state.currentPhotoStep) {
+      div.innerHTML = `<div class="photo-pending pulse" title="${step.label}"><span style="font-size:18px;">📷</span></div>`;
+    } else {
+      div.innerHTML = `<div class="photo-pending" title="${step.label}" style="opacity:0.4;"><span style="font-size:18px;">○</span></div>`;
+    }
+    strip.appendChild(div);
+  });
+}
+
+// ═══════════════════════════
+//  SCREEN 5: REPORT
+// ═══════════════════════════
+async function initReport() {
+  document.getElementById('reportLoading').style.display = 'block';
+  document.getElementById('reportContent').style.display = 'none';
+  document.getElementById('reportTimestamp').textContent = 'Generated ' + new Date().toLocaleString();
+
+  const photoCount = state.photos.filter(p => p).length;
+  const opName = document.getElementById('opName').value || 'Unknown';
+  const opPlate = document.getElementById('opPlate').value || 'Not captured';
+  const opInsurer = document.getElementById('opInsurer').value || 'Not captured';
+  const policeReport = document.getElementById('policeReport').value || 'None';
+
+  const prompt = `Generate a professional First Notification of Loss (FNOL) incident report narrative for the following collision event. Write in third person, professional insurance/fleet management style. Be factual and concise. 3-4 sentences.
+
+Event Details:
+- Event ID: LTX-2026-03847
+- Date/Time: March 24, 2026 at 2:47 PM
+- Location: I-15 Northbound, near Exit 42, Las Vegas, NV
+- Vehicle: Unit #4821, 2023 Ford F-150 (fleet vehicle)
+- Speed at impact: 34 mph
+- G-Force: 8.2g (severe impact)
+- Photos captured: ${photoCount} of 7 evidence photos
+- Other party name: ${opName}
+- Other party license plate: ${opPlate}
+- Other party insurance: ${opInsurer}
+- Police report: ${policeReport}`;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    showReport(data.content, photoCount, opName, opPlate, opInsurer, policeReport);
+  } catch (err) {
+    // Demo fallback narrative
+    const fallback = `On March 24, 2026, at approximately 2:47 PM, fleet vehicle Unit #4821 (2023 Ford F-150) operated by a Lytx-monitored driver was involved in a collision on I-15 Northbound near Exit 42 in Las Vegas, Nevada. Lytx telemetry recorded an impact speed of 34 mph with a g-force reading of 8.2g, indicating a severe impact event. ${photoCount > 0 ? `The driver captured ${photoCount} photographic evidence items at the scene using the CollisionIQ evidence collection workflow.` : ''} ${opName !== 'Unknown' ? `The other party was identified as ${opName}.` : ''} This report has been automatically generated from Lytx event data and driver-captured evidence for FNOL processing.`;
+    showReport(fallback, photoCount, opName, opPlate, opInsurer, policeReport);
+  }
+}
+
+function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeReport) {
+  document.getElementById('reportLoading').style.display = 'none';
+  document.getElementById('reportContent').style.display = 'block';
+  document.getElementById('reportNarrative').textContent = narrative;
+
+  // Evidence summary
+  const evidenceCard = document.getElementById('evidenceSummaryCard');
+  evidenceCard.innerHTML = `
+    <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Photos captured</div>
+      <div style="font-size:13px; font-weight:600;">${photoCount} of 7</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Lytx video clip</div>
+      <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Telemetry data</div>
+      <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
+    </div>`;
+
+  // Other party summary
+  const opCard = document.getElementById('otherPartySummaryCard');
+  opCard.innerHTML = `
+    <div style="font-weight:700; color:#1F4E79; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Name</div>
+      <div style="font-size:13px; font-weight:600;">${opName}</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">License Plate</div>
+      <div style="font-size:13px; font-weight:600;">${opPlate}</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Insurance</div>
+      <div style="font-size:13px; font-weight:600;">${opInsurer}</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#6b7280; font-size:13px;">Police Report</div>
+      <div style="font-size:13px; font-weight:600;">${policeReport}</div>
+    </div>`;
+}
+
+function submitReport() {
+  showToast('✅ Report submitted to fleet manager');
+  setTimeout(() => showToast('📧 Confirmation sent to dlambert@lytx.com'), 2000);
+}
+
+function shareReport() {
+  const url = window.location.href + '?report=LTX-2026-03847';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => showToast('🔗 Share link copied!'));
+  } else {
+    showToast('🔗 Link: ' + url);
+  }
+}
+
+function startOver() {
+  state.currentScreen = 1;
+  state.photos = [];
+  state.safetyQ1 = null;
+  state.safetyQ2 = null;
+  state.safetyQ3 = null;
+  document.getElementById('safetyQ2').style.display = 'none';
+  document.getElementById('safetyQ3').style.display = 'none';
+  document.getElementById('safetyProceed').style.display = 'none';
+  document.getElementById('emergencyMsg').style.display = 'none';
+  document.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
+  ['opName','opLicense','opLicenseState','opPhone','opPlate','opMake','opColor','opInsurer','opPolicy','opInsurerPhone','policeReport','policeBadge','policePhone'].forEach(id => { document.getElementById(id).value = ''; });
+  goToScreen(1);
+}
+
+// ═══════════════════════════
+//  TOAST
+// ═══════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// Init header
+updateHeader(1);
+</script>
+</body>
+</html>
