@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { to, eventId, narrative, opName, opPlate, opInsurer, policeReport, photoCount } = req.body || {};
+  const { to, eventId, narrative, opName, opPlate, opInsurer, policeReport, photoCount, photos } = req.body || {};
 
   if (!to) return res.status(400).json({ error: 'Recipient email required' });
 
@@ -102,6 +102,19 @@ module.exports = async function handler(req, res) {
         </div>
       </div>
 
+      <!-- Evidence Photos -->
+      ${photos && photos.length > 0 ? `
+      <div style="margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Evidence Photos (${photos.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+          ${photos.map((p, i) => `
+          <div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">
+            <img src="cid:photo${i}" style="width:100%;height:140px;object-fit:cover;display:block;" alt="${(p.label || 'Photo ' + (i+1)).replace(/"/g,'&quot;')}" />
+            <div style="padding:6px 8px;font-size:11px;color:#667892;background:#f8fafc;">${(p.label || 'Photo ' + (i+1)).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
+
       <!-- CTA -->
       <div style="text-align:center;padding-top:8px;">
         <a href="https://collisioniq.vercel.app" style="display:inline-block;background:linear-gradient(135deg,#4C84FF,#7C4DFF);color:white;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;letter-spacing:0.2px;">View Full Report →</a>
@@ -133,7 +146,20 @@ module.exports = async function handler(req, res) {
           'Authorization': `Bearer ${RESEND_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ from: FROM_EMAIL, to, subject, html: htmlBody })
+        body: JSON.stringify({
+          from: FROM_EMAIL,
+          to,
+          subject,
+          html: htmlBody,
+          attachments: photos && photos.length > 0
+            ? photos.map((p, i) => ({
+                filename: `photo${i + 1}.jpg`,
+                content: p.data.replace(/^data:image\/\w+;base64,/, ''),
+                content_type: 'image/jpeg',
+                content_id: `photo${i}`
+              }))
+            : undefined
+        })
       });
       const emailData = await emailRes.json();
       if (!emailRes.ok) throw new Error(emailData.message || 'Resend API error');
