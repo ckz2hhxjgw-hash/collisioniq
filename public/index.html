@@ -6,6 +6,8 @@
   <title>CollisionIQ by Lytx</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Lato', sans-serif; background: #ECECEC; color: #1B2431; }
@@ -16,7 +18,14 @@
     .btn-secondary { background: white; color: #4C84FF; border: 2px solid #4C84FF; border-radius: 8px; padding: 14px 24px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.15s; }
     .btn-secondary:active { background: #E5EEF2; }
     .btn-danger { background: #dc2626; color: white; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; border: none; cursor: pointer; }
+    .btn-danger:active { background: #b91c1c; }
     .btn-ghost { background: transparent; color: #667892; border: none; padding: 12px 24px; font-size: 14px; cursor: pointer; width: 100%; }
+    .btn-back { background: transparent; color: rgba(255,255,255,0.7); border: none; padding: 0; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .btn-back:active { color: white; }
+    .btn-scan { background: linear-gradient(135deg, #0f766e, #059669); color: white; border-radius: 8px; padding: 13px 16px; font-size: 15px; font-weight: 700; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.1px; }
+    .btn-scan:active { background: linear-gradient(135deg, #0d6560, #047857); }
+    .btn-dismiss { background: white; color: #dc2626; border: 2.5px solid #dc2626; border-radius: 8px; padding: 14px 24px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-dismiss:active { background: #fef2f2; }
     .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(27,36,49,0.08); }
     .badge { display: inline-flex; align-items: center; gap: 4px; background: #E5EEF2; color: #4C84FF; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
     .badge-red { background: #fee2e2; color: #dc2626; }
@@ -32,6 +41,7 @@
     input[type="text"], input[type="tel"], select { width: 100%; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 12px 14px; font-size: 16px; outline: none; transition: border-color 0.15s; background: white; font-family: 'Lato', sans-serif; color: #1B2431; }
     input[type="text"]:focus, input[type="tel"]:focus, select:focus { border-color: #4C84FF; }
     .spinner { width: 40px; height: 40px; border: 3px solid #E5EEF2; border-top-color: #4C84FF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+    .ocr-spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .fade-in { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -41,6 +51,14 @@
     .safety-btn:active { background: #E5EEF2; border-color: #4C84FF; }
     .safety-btn.selected { background: #E5EEF2; border-color: #4C84FF; color: #4C84FF; }
     .report-text { background: #f8fafc; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #1B2431; white-space: pre-wrap; }
+    .ocr-filled { border-color: #059669 !important; background: #f0fdf4 !important; }
+    #locationMap { height: 160px; border-radius: 10px; overflow: hidden; margin-top: 12px; }
+    #preCollisionMap { height: 260px; border-radius: 10px; overflow: hidden; }
+    .leaflet-container { font-family: 'Lato', sans-serif; }
+    .map-toggle-btn { background: #f1f5f9; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #4C84FF; cursor: pointer; width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; }
+    .map-toggle-btn:active { background: #E5EEF2; }
+    .speed-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .speed-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
   </style>
 </head>
 <body>
@@ -59,58 +77,102 @@
 <div id="screen1" class="screen active">
   <div class="fade-in" style="padding:20px; flex:1;">
 
-    <!-- Alert Banner -->
-    <div style="background:#dc2626; border-radius:16px; padding:20px; margin-bottom:20px; color:white; text-align:center;">
-      <div style="font-size:40px; margin-bottom:8px;">ğŸš¨</div>
-      <div style="font-size:18px; font-weight:700; margin-bottom:4px; letter-spacing:-0.2px;">Collision Detected</div>
-      <div style="font-size:13px; opacity:0.85;">Lytx video and telemetry captured</div>
-    </div>
+    <!-- ACTIVE COLLISION STATE -->
+    <div id="collisionActive">
+      <!-- Alert Banner -->
+      <div style="background:#dc2626; border-radius:16px; padding:20px; margin-bottom:20px; color:white; text-align:center;">
+        <div style="font-size:40px; margin-bottom:8px;">ğŸš¨</div>
+        <div style="font-size:18px; font-weight:700; margin-bottom:4px; letter-spacing:-0.2px;">Collision Detected</div>
+        <div style="font-size:13px; opacity:0.85;">Lytx video and telemetry captured</div>
+      </div>
 
-    <!-- Event Details Card -->
-    <div class="card" style="margin-bottom:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px;">Event Details</div>
-        <span class="badge">LTX-2026-03847</span>
-      </div>
-      <div class="telemetry-row">
-        <div style="color:#667892; font-size:14px;">ğŸ“… Date &amp; Time</div>
-        <div style="font-weight:600; font-size:14px;">Mar 24, 2026 Â· 2:47 PM</div>
-      </div>
-      <div class="telemetry-row">
-        <div style="color:#667892; font-size:14px;">ğŸ“ Location</div>
-        <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#667892;">Las Vegas, NV</span></div>
-      </div>
-      <div class="telemetry-row">
-        <div style="color:#667892; font-size:14px;">ğŸš› Vehicle</div>
-        <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#667892;">2023 Ford F-150</span></div>
-      </div>
-    </div>
-
-    <!-- Impact Data Card -->
-    <div class="card" style="margin-bottom:24px;">
-      <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Impact Data</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:26px; font-weight:700; color:#c2410c;">34</div>
-          <div style="font-size:11px; color:#9a3412; font-weight:600;">MPH AT IMPACT</div>
+      <!-- Event Details Card -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px;">Event Details</div>
+          <span class="badge">LTX-2026-03847</span>
         </div>
-        <div style="background:#fef2f2; border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:26px; font-weight:700; color:#dc2626;">8.2g</div>
-          <div style="font-size:11px; color:#991b1b; font-weight:600;">G-FORCE (SEVERE)</div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:14px;">ğŸ“… Date &amp; Time</div>
+          <div style="font-weight:600; font-size:14px;">Mar 24, 2026 Â· 2:47 PM</div>
+        </div>
+        <div class="telemetry-row" style="flex-direction:column; align-items:flex-start; gap:8px; padding-bottom:0;">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <div style="color:#667892; font-size:14px;">ğŸ“ Location</div>
+            <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#667892;">Las Vegas, NV</span></div>
+          </div>
+          <!-- Embedded Map -->
+          <div id="locationMap"></div>
+          <button class="map-toggle-btn" onclick="toggleLocationMap(this)" style="margin-top:4px; margin-bottom:8px;">
+            <span>ğŸ—ºï¸ Show on map</span><span id="mapToggleArrow">â–¼</span>
+          </button>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:14px;">ğŸš› Vehicle</div>
+          <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#667892;">2023 Ford F-150</span></div>
         </div>
       </div>
+
+      <!-- Impact Data Card -->
+      <div class="card" style="margin-bottom:24px;">
+        <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Impact Data</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:26px; font-weight:700; color:#c2410c;">34</div>
+            <div style="font-size:11px; color:#9a3412; font-weight:600;">MPH AT IMPACT</div>
+          </div>
+          <div style="background:#fef2f2; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:26px; font-weight:700; color:#dc2626;">8.2g</div>
+            <div style="font-size:11px; color:#991b1b; font-weight:600;">G-FORCE (SEVERE)</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="goToScreen(2)" style="margin-bottom:14px;">
+        Begin Incident Report â†’
+      </button>
+
+      <!-- Highly visible dismiss button -->
+      <div style="border: 2px solid #dc2626; border-radius: 10px; padding: 14px; background: #fef2f2;">
+        <div style="font-size:12px; font-weight:700; color:#dc2626; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; text-align:center;">Not a collision?</div>
+        <button class="btn-dismiss" onclick="dismissAlert()">
+          <span>âœ•</span> Dismiss â€” False Trigger
+        </button>
+      </div>
     </div>
 
-    <button class="btn-primary" onclick="goToScreen(2)" style="margin-bottom:12px;">
-      Begin Incident Report â†’
-    </button>
-    <button class="btn-ghost" onclick="dismissAlert()">Not a collision â€” Dismiss</button>
+    <!-- NO COLLISION STATE (shown after dismiss) -->
+    <div id="collisionDismissed" style="display:none;" class="fade-in">
+      <div style="text-align:center; padding:40px 20px;">
+        <div style="font-size:56px; margin-bottom:16px;">âœ…</div>
+        <div style="font-size:20px; font-weight:700; color:#1B2431; margin-bottom:8px;">No Active Collisions</div>
+        <div style="color:#667892; font-size:15px; line-height:1.5; margin-bottom:32px;">The event was dismissed. Lytx telemetry has been saved.</div>
+      </div>
+      <div class="card" style="background:#f0fdf4; border:2px solid #86efac; text-align:center; margin-bottom:16px;">
+        <div style="font-size:14px; color:#15803d; font-weight:600;">Event LTX-2026-03847 â€” Dismissed</div>
+        <div style="font-size:12px; color:#16a34a; margin-top:4px;">Recorded as false trigger Â· Telemetry retained</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; margin-bottom:12px;">Was there an incident Lytx didn't detect?</div>
+        <div style="color:#667892; font-size:14px; margin-bottom:16px; line-height:1.5;">You can manually start an incident report for any collision or near-miss.</div>
+        <button class="btn-secondary" onclick="startManualReport()" style="margin-bottom:10px;">+ Report Incident Manually</button>
+        <button class="btn-ghost" style="font-size:13px;">View Incident History</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <!-- â•â•â• SCREEN 2: SAFETY CHECK â•â•â• -->
 <div id="screen2" class="screen">
   <div class="fade-in" style="padding:20px; flex:1;">
+
+    <!-- Back nav -->
+    <div style="margin-bottom:20px;">
+      <button class="btn-back" onclick="goToScreen(1)" style="color:#667892; font-size:14px; display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; font-weight:600;">
+        â† Back
+      </button>
+    </div>
 
     <div style="text-align:center; margin-bottom:24px;">
       <div style="font-size:48px; margin-bottom:12px;">ğŸ›¡ï¸</div>
@@ -131,7 +193,7 @@
       </div>
     </div>
 
-    <!-- Q2 (hidden until Q1 answered) -->
+    <!-- Q2 -->
     <div class="card" id="safetyQ2" style="display:none; opacity:0; transition:opacity 0.3s;">
       <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Are any other parties injured?</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
@@ -144,7 +206,7 @@
       </div>
     </div>
 
-    <!-- Q3 (hidden until Q2 answered) -->
+    <!-- Q3 -->
     <div class="card" id="safetyQ3" style="display:none; opacity:0; transition:opacity 0.3s;">
       <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Is your vehicle in a safe position?</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
@@ -157,8 +219,22 @@
       </div>
     </div>
 
-    <!-- Emergency message (shown if someone is injured) -->
-    <div id="emergencyMsg" style="display:none;" class="card" style="background:#fef2f2; border:2px solid #fca5a5;">
+    <!-- Q4: Vehicle now safe? (shown only if "blocking traffic" selected) -->
+    <div class="card" id="safetyQ4" style="display:none; opacity:0; transition:opacity 0.3s; border:2px solid #fbbf24; background:#fffbeb;">
+      <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:14px;">
+        <span style="font-size:24px;">âš ï¸</span>
+        <div>
+          <div style="font-weight:700; font-size:16px; color:#92400e; margin-bottom:4px;">Move to safety first</div>
+          <div style="font-size:14px; color:#78350f; line-height:1.5;">If safe to do so, move your vehicle to the shoulder. Turn on hazard lights. Confirm below when you're out of traffic.</div>
+        </div>
+      </div>
+      <button class="btn-primary" style="background:#15803d;" onclick="confirmVehicleSafe()">
+        âœ… Vehicle is now safe / out of traffic
+      </button>
+    </div>
+
+    <!-- Emergency message -->
+    <div id="emergencyMsg" style="display:none;" class="card">
       <div style="background:#fef2f2; border:2px solid #fca5a5; border-radius:12px; padding:16px; text-align:center;">
         <div style="font-size:32px; margin-bottom:8px;">ğŸš‘</div>
         <div style="font-weight:700; color:#dc2626; font-size:16px; margin-bottom:6px;">Call 911 First</div>
@@ -168,7 +244,7 @@
       </div>
     </div>
 
-    <!-- Proceed button (shown after all answered safely) -->
+    <!-- Proceed -->
     <div id="safetyProceed" style="display:none;">
       <div class="card" style="background:#f0fdf4; border:2px solid #86efac; text-align:center; padding:16px; margin-bottom:16px;">
         <div style="font-size:28px; margin-bottom:6px;">âœ…</div>
@@ -183,6 +259,11 @@
 <!-- â•â•â• SCREEN 3: EVIDENCE COLLECTION â•â•â• -->
 <div id="screen3" class="screen">
   <div class="fade-in" style="padding:20px; flex:1; display:flex; flex-direction:column;">
+
+    <!-- Back nav -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button style="background:none; border:none; padding:0; cursor:pointer; font-size:14px; font-weight:600; color:#667892; display:flex; align-items:center; gap:6px;" onclick="goToScreen(2)">â† Back</button>
+    </div>
 
     <!-- Progress -->
     <div style="margin-bottom:20px;">
@@ -205,7 +286,7 @@
       <!-- AI Hint -->
       <div style="background:#E5EEF2; border-radius:8px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
         <span style="font-size:18px; flex-shrink:0;">ğŸ’¡</span>
-        <div style="font-size:14px; color:#4C84FF; line-height:1.5; font-weight:400;" id="photoHint">Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.</div>
+        <div style="font-size:14px; color:#4C84FF; line-height:1.5; font-weight:400;" id="photoHint">Step back far enough to capture the full driver side of your vehicle.</div>
       </div>
 
       <!-- Photo capture area -->
@@ -227,7 +308,7 @@
 
     <!-- Navigation -->
     <div style="display:flex; gap:10px;">
-      <button class="btn-ghost" style="width:auto; padding:14px 20px;" onclick="skipPhoto()">Skip</button>
+      <button id="skipBtn" class="btn-ghost" style="width:auto; padding:14px 20px;" onclick="skipPhoto()">Skip</button>
       <button class="btn-primary" id="photoNextBtn" style="opacity:0.4; pointer-events:none;" onclick="nextPhotoStep()">Next â†’</button>
     </div>
 
@@ -238,14 +319,26 @@
 <div id="screen4" class="screen">
   <div class="fade-in" style="padding:20px; flex:1;">
 
+    <!-- Back nav -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button style="background:none; border:none; padding:0; cursor:pointer; font-size:14px; font-weight:600; color:#667892; display:flex; align-items:center; gap:6px;" onclick="goToScreen(3)">â† Back</button>
+    </div>
+
     <div style="margin-bottom:20px;">
       <div style="font-size:18px; font-weight:700; color:#4C84FF; margin-bottom:6px;">Other Party Details</div>
-      <div style="color:#667892; font-size:14px;">Capture as much as you can. All fields are optional.</div>
+      <div style="color:#667892; font-size:14px;">Capture as much as you can. Tap scan buttons to auto-fill from photos.</div>
     </div>
 
     <!-- Other Driver -->
     <div class="card">
-      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Other Driver</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Driver</div>
+
+      <!-- OCR Scan DL button -->
+      <button class="btn-scan" id="scanDLBtn" onclick="scanOCR('dl')" style="margin-bottom:14px;">
+        <span style="font-size:20px;">ğŸªª</span> Scan Driver's License
+      </button>
+      <input type="file" id="ocrDLInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('dl', event)">
+
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opName" placeholder="Full name" />
         <input type="text" id="opLicense" placeholder="Driver's license number" />
@@ -256,7 +349,14 @@
 
     <!-- Vehicle -->
     <div class="card">
-      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Vehicle</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Their Vehicle</div>
+
+      <!-- OCR Scan Plate button -->
+      <button class="btn-scan" id="scanPlateBtn" onclick="scanOCR('plate')" style="margin-bottom:14px;">
+        <span style="font-size:20px;">ğŸš—</span> Scan License Plate
+      </button>
+      <input type="file" id="ocrPlateInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('plate', event)">
+
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opPlate" placeholder="License plate number" />
         <input type="text" id="opMake" placeholder="Make and model (e.g. Toyota Camry)" />
@@ -266,7 +366,14 @@
 
     <!-- Insurance -->
     <div class="card">
-      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Their Insurance</div>
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Their Insurance</div>
+
+      <!-- OCR Scan Insurance Card button -->
+      <button class="btn-scan" id="scanInsBtn" onclick="scanOCR('insurance')" style="margin-bottom:14px;">
+        <span style="font-size:20px;">ğŸ“‹</span> Scan Insurance Card
+      </button>
+      <input type="file" id="ocrInsInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('insurance', event)">
+
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input type="text" id="opInsurer" placeholder="Insurance company" />
         <input type="text" id="opPolicy" placeholder="Policy number" />
@@ -309,7 +416,7 @@
       <div style="color:#667892; font-size:14px;">CollisionIQ AI is analyzing your evidence</div>
     </div>
 
-    <!-- Report Content (shown after generation) -->
+    <!-- Report Content -->
     <div id="reportContent" style="display:none;">
 
       <!-- Narrative -->
@@ -343,6 +450,48 @@
         </div>
       </div>
 
+      <!-- Pre-Collision Track (collapsible) -->
+      <div class="card" style="margin-bottom:12px; padding:16px;">
+        <button class="map-toggle-btn" onclick="togglePreCollisionMap(this)" style="background:none; border:none; padding:0; width:100%; text-align:left; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">ğŸ—ºï¸</span>
+            <div>
+              <div style="font-weight:700; color:#4C84FF; font-size:14px;">Pre-Collision Track</div>
+              <div style="font-size:12px; color:#667892;">10 min leading to event Â· Speed Â· Weather Â· Traffic</div>
+            </div>
+          </div>
+          <span id="preMapArrow" style="color:#4C84FF; font-size:16px;">â–¼</span>
+        </button>
+
+        <div id="preCollisionSection" style="display:none; margin-top:14px;">
+          <!-- Conditions row -->
+          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <span class="badge" style="background:#e0f2fe; color:#0369a1;">â˜€ï¸ Clear Â· 72Â°F</span>
+            <span class="badge" style="background:#f0fdf4; color:#15803d;">ğŸ›£ï¸ Dry roads</span>
+            <span class="badge badge-orange">ğŸš¦ Moderate traffic</span>
+            <span class="badge" style="background:#f3e8ff; color:#7e22ce;">ğŸ“¡ Lytx telemetry</span>
+          </div>
+          <!-- Map -->
+          <div id="preCollisionMap"></div>
+          <!-- Speed legend -->
+          <div class="speed-legend" style="margin-top:12px;">
+            <div style="font-size:12px; color:#667892; font-weight:700; margin-bottom:2px; width:100%;">SPEED ALONG ROUTE</div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <span><span class="speed-dot" style="background:#16a34a;"></span><span style="font-size:12px; color:#667892;">â‰¤55 mph</span></span>
+              <span><span class="speed-dot" style="background:#f59e0b;"></span><span style="font-size:12px; color:#667892;">56â€“65 mph</span></span>
+              <span><span class="speed-dot" style="background:#ea580c;"></span><span style="font-size:12px; color:#667892;">66â€“75 mph</span></span>
+              <span><span class="speed-dot" style="background:#dc2626;"></span><span style="font-size:12px; color:#667892;">Impact</span></span>
+            </div>
+          </div>
+          <!-- Timeline -->
+          <div style="margin-top:14px; background:#f8fafc; border-radius:8px; padding:12px;">
+            <div style="font-size:12px; font-weight:700; color:#667892; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Speed Timeline</div>
+            <div id="speedTimeline"></div>
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:10px; line-height:1.5;">â“˜ Weather and traffic data are simulated for this demo. Production integration pulls live data from Lytx telematics, NOAA, and real-time traffic APIs.</div>
+        </div>
+      </div>
+
       <!-- Evidence Summary -->
       <div class="card" style="margin-bottom:12px;" id="evidenceSummaryCard"></div>
 
@@ -359,6 +508,13 @@
   </div>
 </div>
 
+<!-- â•â•â• OCR PROCESSING OVERLAY â•â•â• -->
+<div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(27,36,49,0.85); z-index:200; display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+  <div class="spinner" style="border-color:rgba(255,255,255,0.2); border-top-color:#4C84FF; width:52px; height:52px;"></div>
+  <div style="color:white; font-weight:700; font-size:16px;" id="ocrStatusText">Scanningâ€¦</div>
+  <div style="color:rgba(255,255,255,0.6); font-size:13px;">CollisionIQ OCR is reading the document</div>
+</div>
+
 <!-- â•â•â• SUCCESS TOAST â•â•â• -->
 <div id="toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1B2431; color:white; padding:12px 24px; border-radius:50px; font-size:14px; font-weight:700; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.25); white-space:nowrap; letter-spacing:0.2px;"></div>
 
@@ -373,7 +529,9 @@ const state = {
   safetyQ3: null,
   photos: [],
   currentPhotoStep: 0,
-  reportGenerated: false
+  reportGenerated: false,
+  locationMapShown: false,
+  preMapShown: false
 };
 
 const EVIDENCE_STEPS = [
@@ -384,6 +542,19 @@ const EVIDENCE_STEPS = [
   { label: 'Other vehicle â€” damage', hint: 'Document any visible damage on the other vehicle with a clear, close-up shot.' },
   { label: 'Overall scene', hint: 'Step back and photograph the full accident scene, including both vehicles and road markings.' },
   { label: 'Road conditions / signage', hint: 'Photograph any relevant signs, signals, traffic lights, or road conditions that may have contributed.' }
+];
+
+// Pre-collision GPS track (I-15 N, approaching Exit 42, Las Vegas)
+// Coordinates: [lat, lng, speed_mph, time_label]
+const PRE_COLLISION_TRACK = [
+  [36.068, -115.183, 62, '-10 min'],
+  [36.082, -115.181, 65, '-8 min'],
+  [36.096, -115.179, 68, '-6 min'],
+  [36.110, -115.177, 67, '-4 min'],
+  [36.124, -115.175, 63, '-2 min'],
+  [36.138, -115.173, 58, '-1 min'],
+  [36.148, -115.171, 45, '-30 sec'],
+  [36.154, -115.168, 34, 'Impact']
 ];
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -411,23 +582,66 @@ function updateHeader(n) {
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  SCREEN 1
+//  SCREEN 1: ALERT & MAP
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let locationMapInstance = null;
+function toggleLocationMap(btn) {
+  const mapEl = document.getElementById('locationMap');
+  const arrow = document.getElementById('mapToggleArrow');
+  if (!state.locationMapShown) {
+    mapEl.style.display = 'block';
+    arrow.textContent = 'â–²';
+    btn.querySelector('span:first-child').textContent = 'ğŸ—ºï¸ Hide map';
+    state.locationMapShown = true;
+    if (!locationMapInstance) {
+      setTimeout(() => {
+        locationMapInstance = L.map('locationMap', { zoomControl: false, attributionControl: false }).setView([36.154, -115.168], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(locationMapInstance);
+        const pulseIcon = L.divIcon({
+          html: '<div style="width:18px;height:18px;background:#dc2626;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(220,38,38,0.3);animation:pulse 2s infinite;"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          className: ''
+        });
+        L.marker([36.154, -115.168], { icon: pulseIcon })
+          .addTo(locationMapInstance)
+          .bindPopup('<b>Collision location</b><br>I-15 N, Exit 42<br>Las Vegas, NV')
+          .openPopup();
+      }, 100);
+    }
+  } else {
+    mapEl.style.display = 'none';
+    arrow.textContent = 'â–¼';
+    btn.querySelector('span:first-child').textContent = 'ğŸ—ºï¸ Show on map';
+    state.locationMapShown = false;
+  }
+}
+
+// Initialize location map as hidden
+document.getElementById('locationMap').style.display = 'none';
+
 function dismissAlert() {
-  showToast('Event dismissed. Lytx telemetry saved.');
+  document.getElementById('collisionActive').style.display = 'none';
+  document.getElementById('collisionDismissed').style.display = 'block';
+  document.getElementById('headerRight').innerHTML = '<span style="background:#e2e8f0; color:#475569; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">DISMISSED</span>';
+}
+
+function startManualReport() {
+  document.getElementById('collisionActive').style.display = 'block';
+  document.getElementById('collisionDismissed').style.display = 'none';
+  document.getElementById('headerRight').innerHTML = '<span style="background:#dc2626; color:white; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">LIVE EVENT</span>';
+  showToast('Manual incident report started');
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  SCREEN 2: SAFETY
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function answerSafety(q, answer, btn) {
-  // Mark selected
   const card = document.getElementById(`safetyQ${q}`);
   card.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   state[`safetyQ${q}`] = answer;
 
-  // Emergency if injured
   if ((q === 1 && answer === 'no') || (q === 2 && answer === 'yes')) {
     setTimeout(() => {
       document.getElementById('emergencyMsg').style.display = 'block';
@@ -435,7 +649,6 @@ function answerSafety(q, answer, btn) {
     return;
   }
 
-  // Show next question
   setTimeout(() => {
     if (q === 1) {
       const q2 = document.getElementById('safetyQ2');
@@ -445,12 +658,25 @@ function answerSafety(q, answer, btn) {
       const q3 = document.getElementById('safetyQ3');
       q3.style.display = 'block';
       setTimeout(() => { q3.style.opacity = '1'; }, 50);
-    } else if (q === 3) {
+    } else if (q === 3 && answer === 'safe') {
       document.getElementById('safetyProceed').style.display = 'block';
-      if (answer === 'unsafe') {
-        showToast('âš ï¸ Move vehicle to shoulder if safe to do so');
-      }
+    } else if (q === 3 && answer === 'unsafe') {
+      // Show mandatory vehicle-safe confirmation step
+      const q4 = document.getElementById('safetyQ4');
+      q4.style.display = 'block';
+      setTimeout(() => { q4.style.opacity = '1'; }, 50);
+      showToast('âš ï¸ Move vehicle to shoulder if safe to do so');
     }
+  }, 300);
+}
+
+function confirmVehicleSafe() {
+  document.getElementById('safetyQ4').style.borderColor = '#86efac';
+  document.getElementById('safetyQ4').style.background = '#f0fdf4';
+  document.getElementById('safetyQ4').querySelector('button').textContent = 'âœ… Confirmed â€” vehicle is safe';
+  document.getElementById('safetyQ4').querySelector('button').style.background = '#15803d';
+  setTimeout(() => {
+    document.getElementById('safetyProceed').style.display = 'block';
   }, 300);
 }
 
@@ -478,14 +704,12 @@ function renderPhotoStep() {
   const pct = (state.currentPhotoStep / 7) * 100;
   document.getElementById('photoProgress').style.width = pct + '%';
 
-  // Reset preview
   document.getElementById('photoPreview').innerHTML = `
     <div style="text-align:center; color:#94a3b8;">
       <div style="font-size:36px; margin-bottom:4px;">ğŸ“·</div>
       <div style="font-size:12px;">No photo yet</div>
     </div>`;
 
-  // Check if already have photo for this step
   if (state.photos[state.currentPhotoStep]) {
     showPhotoPreview(state.photos[state.currentPhotoStep]);
     enableNext();
@@ -495,6 +719,13 @@ function renderPhotoStep() {
   }
 
   document.getElementById('photoInput').value = '';
+  updateSkipBtn();
+}
+
+function updateSkipBtn() {
+  const capturedCount = state.photos.filter(p => p).length;
+  const skipBtn = document.getElementById('skipBtn');
+  skipBtn.textContent = capturedCount >= 1 ? 'Done' : 'Skip';
 }
 
 function handlePhotoCapture(event) {
@@ -505,6 +736,7 @@ function handlePhotoCapture(event) {
   showPhotoPreview(url);
   enableNext();
   renderPhotoStrip();
+  updateSkipBtn();
 }
 
 function useMockPhoto() {
@@ -516,6 +748,7 @@ function useMockPhoto() {
   enableNext();
   renderPhotoStrip();
   showToast('Sample photo added âœ“');
+  updateSkipBtn();
 }
 
 function showPhotoPreview(urlOrObj) {
@@ -540,13 +773,19 @@ function nextPhotoStep() {
 }
 
 function skipPhoto() {
-  state.photos[state.currentPhotoStep] = null;
-  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
-    state.currentPhotoStep++;
-    renderPhotoStep();
-    renderPhotoStrip();
-  } else {
+  const capturedCount = state.photos.filter(p => p).length;
+  if (capturedCount >= 1) {
+    // "Done" behavior â€” exit evidence early
     goToScreen(4);
+  } else {
+    state.photos[state.currentPhotoStep] = null;
+    if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+      state.currentPhotoStep++;
+      renderPhotoStep();
+      renderPhotoStrip();
+    } else {
+      goToScreen(4);
+    }
   }
 }
 
@@ -571,138 +810,120 @@ function renderPhotoStrip() {
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  SCREEN 5: REPORT
+//  SCREEN 4: OCR SCANNING
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-async function initReport() {
-  document.getElementById('reportLoading').style.display = 'block';
-  document.getElementById('reportContent').style.display = 'none';
-  document.getElementById('reportTimestamp').textContent = 'Generated ' + new Date().toLocaleString();
+function scanOCR(type) {
+  const inputMap = { dl: 'ocrDLInput', plate: 'ocrPlateInput', insurance: 'ocrInsInput' };
+  document.getElementById(inputMap[type]).click();
+}
 
-  const photoCount = state.photos.filter(p => p).length;
-  const opName = document.getElementById('opName').value || 'Unknown';
-  const opPlate = document.getElementById('opPlate').value || 'Not captured';
-  const opInsurer = document.getElementById('opInsurer').value || 'Not captured';
-  const policeReport = document.getElementById('policeReport').value || 'None';
+function processOCR(type, event) {
+  if (!event.target.files[0]) return;
+  // Show OCR processing overlay
+  const overlay = document.getElementById('ocrOverlay');
+  overlay.style.display = 'flex';
+  const statusEl = document.getElementById('ocrStatusText');
 
-  const prompt = `Generate a professional First Notification of Loss (FNOL) incident report narrative for the following collision event. Write in third person, professional insurance/fleet management style. Be factual and concise. 3-4 sentences.
+  const messages = ['Scanning documentâ€¦', 'Reading textâ€¦', 'Extracting fieldsâ€¦', 'Verifying dataâ€¦'];
+  let i = 0;
+  const msgInterval = setInterval(() => {
+    if (i < messages.length) { statusEl.textContent = messages[i++]; }
+  }, 500);
 
-Event Details:
-- Event ID: LTX-2026-03847
-- Date/Time: March 24, 2026 at 2:47 PM
-- Location: I-15 Northbound, near Exit 42, Las Vegas, NV
-- Vehicle: Unit #4821, 2023 Ford F-150 (fleet vehicle)
-- Speed at impact: 34 mph
-- G-Force: 8.2g (severe impact)
-- Photos captured: ${photoCount} of 7 evidence photos
-- Other party name: ${opName}
-- Other party license plate: ${opPlate}
-- Other party insurance: ${opInsurer}
-- Police report: ${policeReport}`;
+  setTimeout(() => {
+    clearInterval(msgInterval);
+    overlay.style.display = 'none';
+    fillOCRData(type);
+  }, 2200);
+}
 
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    showReport(data.content, photoCount, opName, opPlate, opInsurer, policeReport);
-  } catch (err) {
-    // Demo fallback narrative
-    const fallback = `On March 24, 2026, at approximately 2:47 PM, fleet vehicle Unit #4821 (2023 Ford F-150) operated by a Lytx-monitored driver was involved in a collision on I-15 Northbound near Exit 42 in Las Vegas, Nevada. Lytx telemetry recorded an impact speed of 34 mph with a g-force reading of 8.2g, indicating a severe impact event. ${photoCount > 0 ? `The driver captured ${photoCount} photographic evidence items at the scene using the CollisionIQ evidence collection workflow.` : ''} ${opName !== 'Unknown' ? `The other party was identified as ${opName}.` : ''} This report has been automatically generated from Lytx event data and driver-captured evidence for FNOL processing.`;
-    showReport(fallback, photoCount, opName, opPlate, opInsurer, policeReport);
+function fillOCRData(type) {
+  if (type === 'dl') {
+    setFieldOCR('opName', 'James R. Thornton');
+    setFieldOCR('opLicense', 'NV8847291');
+    setFieldOCR('opLicenseState', 'NV');
+    setFieldOCR('opPhone', '');
+    showToast('âœ“ Driver\'s license scanned â€” 3 fields filled');
+    document.getElementById('scanDLBtn').innerHTML = '<span style="font-size:20px;">âœ…</span> License Scanned';
+    document.getElementById('scanDLBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
+  } else if (type === 'plate') {
+    setFieldOCR('opPlate', '7XYZ432');
+    showToast('âœ“ License plate scanned');
+    document.getElementById('scanPlateBtn').innerHTML = '<span style="font-size:20px;">âœ…</span> Plate Scanned: 7XYZ432';
+    document.getElementById('scanPlateBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
+  } else if (type === 'insurance') {
+    setFieldOCR('opInsurer', 'State Farm Insurance');
+    setFieldOCR('opPolicy', 'SFP-2847-NV-03');
+    setFieldOCR('opInsurerPhone', '1-800-732-5246');
+    showToast('âœ“ Insurance card scanned â€” 3 fields filled');
+    document.getElementById('scanInsBtn').innerHTML = '<span style="font-size:20px;">âœ…</span> Insurance Scanned';
+    document.getElementById('scanInsBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
   }
 }
 
-function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeReport) {
-  document.getElementById('reportLoading').style.display = 'none';
-  document.getElementById('reportContent').style.display = 'block';
-  document.getElementById('reportNarrative').textContent = narrative;
-
-  // Evidence summary
-  const evidenceCard = document.getElementById('evidenceSummaryCard');
-  evidenceCard.innerHTML = `
-    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Photos captured</div>
-      <div style="font-size:13px; font-weight:600;">${photoCount} of 7</div>
-    </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Lytx video clip</div>
-      <div style="font-size:13px; font-weight:600; color:#16a34a;">âœ“ Auto-captured</div>
-    </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Telemetry data</div>
-      <div style="font-size:13px; font-weight:600; color:#16a34a;">âœ“ Auto-captured</div>
-    </div>`;
-
-  // Other party summary
-  const opCard = document.getElementById('otherPartySummaryCard');
-  opCard.innerHTML = `
-    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Name</div>
-      <div style="font-size:13px; font-weight:600;">${opName}</div>
-    </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">License Plate</div>
-      <div style="font-size:13px; font-weight:600;">${opPlate}</div>
-    </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Insurance</div>
-      <div style="font-size:13px; font-weight:600;">${opInsurer}</div>
-    </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Police Report</div>
-      <div style="font-size:13px; font-weight:600;">${policeReport}</div>
-    </div>`;
+function setFieldOCR(id, value) {
+  if (!value) return;
+  const el = document.getElementById(id);
+  el.value = value;
+  el.classList.add('ocr-filled');
 }
 
-function submitReport() {
-  showToast('âœ… Report submitted to fleet manager');
-  setTimeout(() => showToast('ğŸ“§ Confirmation sent to dlambert@lytx.com'), 2000);
-}
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  SCREEN 5: REPORT & MAP
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let preCollisionMapInstance = null;
 
-function shareReport() {
-  const url = window.location.href + '?report=LTX-2026-03847';
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => showToast('ğŸ”— Share link copied!'));
+function togglePreCollisionMap(btn) {
+  const section = document.getElementById('preCollisionSection');
+  const arrow = document.getElementById('preMapArrow');
+  if (!state.preMapShown) {
+    section.style.display = 'block';
+    arrow.textContent = 'â–²';
+    state.preMapShown = true;
+    if (!preCollisionMapInstance) {
+      setTimeout(() => {
+        renderPreCollisionMap();
+      }, 100);
+    }
   } else {
-    showToast('ğŸ”— Link: ' + url);
+    section.style.display = 'none';
+    arrow.textContent = 'â–¼';
+    state.preMapShown = false;
   }
 }
 
-function startOver() {
-  state.currentScreen = 1;
-  state.photos = [];
-  state.safetyQ1 = null;
-  state.safetyQ2 = null;
-  state.safetyQ3 = null;
-  document.getElementById('safetyQ2').style.display = 'none';
-  document.getElementById('safetyQ3').style.display = 'none';
-  document.getElementById('safetyProceed').style.display = 'none';
-  document.getElementById('emergencyMsg').style.display = 'none';
-  document.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
-  ['opName','opLicense','opLicenseState','opPhone','opPlate','opMake','opColor','opInsurer','opPolicy','opInsurerPhone','policeReport','policeBadge','policePhone'].forEach(id => { document.getElementById(id).value = ''; });
-  goToScreen(1);
-}
+function renderPreCollisionMap() {
+  const coords = PRE_COLLISION_TRACK.map(p => [p[0], p[1]]);
+  const center = [36.115, -115.176];
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  TOAST
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 3000);
-}
+  preCollisionMapInstance = L.map('preCollisionMap', { zoomControl: true, attributionControl: false }).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(preCollisionMapInstance);
 
-// Init header
-updateHeader(1);
-</script>
-</body>
-</html>
+  // Draw colored segments by speed
+  const colorForSpeed = (s) => {
+    if (s >= 66) return '#ea580c';
+    if (s >= 56) return '#f59e0b';
+    if (s <= 40) return '#dc2626;
+    return '#16a34a';
+  };
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const speed = PRE_COLLISION_TRACK[i][2];
+    L.polyline([coords[i], coords[i+1]], {
+      color: colorForSpeed(speed),
+      weight: 6,
+      opacity: 0.85
+    }).addTo(preCollisionMapInstance);
+  }
+
+  // Time markers
+  PRE_COLLISION_TRACK.forEach((pt, i) => {
+    const isImpact = i === PRE_COLLISION_TRACK.length - 1;
+    const icon = L.divIcon({
+      html: isImpact
+        ? `<div style="background:#dc2626;color:white;font-size:10px;font-weight:700;padding:3px 6px;border-radius:12px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"ğŸ’¥ Impact</div>`
+        : `<div style="background:#1B2431;color:white;font-size:9px;font-weight:700;padding:2px 5px;border-radius:8px;white-space:nowrap;opacity:0.85;">${pt[2]} mph</div>`,
+      iconAnchor: isImpact ? [30, 10] : [20, 8],
+      className: ''
+    });
+    L.marker([pt[0], pt[1]], { icon }).addTo(preCofÆÆ—6–öäÖ–ç7Fæ6R“°¢Ò“° ¢òò7F'BÖ&¶W ¢6öç7B7F'D–6öâÒÂæF—d–6öâ‡°¢‡FÖÃ¢ÆF—b7G–ÆSÒ'v–GFƒ£'ƒ¶†V–v‡C£'ƒ¶&6¶w&÷VæC¢3f3F¶&÷&FW"×&F—W3£SS¶&÷&FW#£'‚6öÆ–Bv†—FS¶&÷‚×6†F÷s£‚G‚&v&ƒÃÃÃã2“²#ãÂöF—cæÀ¢–6öå6—¦S¢³"Ã%ÒÂ–6öäæ6†÷#¢³bÃeÒÂ6Æ74æÖS¢rp¢Ò“°¢ÂæÖ&¶W"†6ö÷&G5³ÒÂ²–6öã¢7F'D–6öâÒ’æFEFò‡&T6öÆÆ—6–öäÖ–ç7Fæ6R’æ&–æE÷W‚u7F'BöbG&6²…BÓÖ–â’r“° ¢òò'V–ÆB7VVBF–ÖVÆ–æP¢&VæFW%7VVEF–ÖVÆ–æR‚“°§Ğ ¦gVæ7F–öâ&VæFW%7VVEF–ÖVÆ–æR‚’°¢6öç7BVÂÒFö7VÖVçBævWDVÆVÖVçD'”–B‚w7VVEF–ÖVÆ–æRr“°¢VÂæ–ææW$…DÔÂÒ$Uô4ôÄÄ•4”ôåõE$4²æÖ‡BÓâ°¢6öç7B7BÒÖF‚æÖ–âƒÂ‡E³%Òòƒ’¢“°¢6öç7B—4–×7BÒE³5ÒÓÓÒt–×7Bs°¢6öç7B&$6öÆ÷"Ò—4–×7Bòr6F3#c#br¢E³%ÒãÒcbòr6VSƒ2r¢E³%ÒãÒSbòr6cS–S"r¢r3f3Fs°¢&WGW&âÆF—b7G–ÆSÒ&F—7Æ“¦fÆWƒ²Æ–vâÖ—FV×3¦6VçFW#²v£‡ƒ²Ö&v–âÖ&÷GFöÓ£gƒ²#à¢ÆF—b7G–ÆSÒ'v–GFƒ£S'ƒ²föçB×6—¦S£ƒ²6öÆ÷#¢3ccsƒ“#²fÆW‚×6‡&–æ³£²#âG·E³5×ÓÂöF—cà¢ÆF—b7G–ÆSÒ&fÆWƒ£²†V–v‡C£‡ƒ²&6¶w&÷VæC¢4STTTc#²&÷&FW"×&F—W3£Gƒ²÷fW&fÆ÷s¦†–FFVã²#à¢ÆF—b7G–ÆSÒ&†V–v‡C£S²v–GFƒ¢G·7GÒS²&6¶w&÷VæC¢G¶&$6öÆ÷'Ó²&÷&FW"×&F—W3£Gƒ²#ãÂöF—cà¢ÂöF—cà¢ÆF—b7G–ÆSÒ'v–GFƒ£CGƒ²föçB×6—¦S£ƒ²föçB×vV–v‡C£s²6öÆ÷#¢G¶—4–×7Bòr6F3#c#br¢r3##C3wÓ²FW‡BÖÆ–vã§&–v‡C²#âG¶—4–×7Bò	ù*Rr¢rwÒG·E³%×Ò×ƒÂöF—cà¢ÂöF—cæ°¢Ò’æ¦ö–â‚rr“°§Ğ ¦7–æ2gVæ7F–öâ–æ—E&W÷'B‚’°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'DÆöF–ærr’ç7G–ÆRæF—7Æ’Òv&Æö6²s°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'D6öçFVçBr’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'EF–ÖW7F×r’çFW‡D6öçFVçBÒtvVæW&FVBr²æWrFFR‚’çFôÆö6ÆU7G&–ær‚“°¢7FFRç&TÖ6†÷vâÒfÇ6S°¢&T6öÆÆ—6–öäÖ–ç7Fæ6RÒçVÆÃ°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&TÖ'&÷rr’çFW‡D6öçFVçBÒ~)kÂs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&T6öÆÆ—6–öå6V7F–öâr’ç7G–ÆRæF—7Æ’ÒvæöæRs° ¢6öç7B†÷Fô6÷VçBÒ7FFRç†÷F÷2æf–ÇFW"‡Óâ’æÆVæwFƒ°¢6öç7B÷æÖRÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v÷æÖRr’çfÇVRÇÂuVæ¶æ÷vâs°¢6öç7B÷ÆFRÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v÷ÆFRr’çfÇVRÇÂtæ÷B6GW&VBs°¢6öç7B÷–ç7W&W"ÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v÷–ç7W&W"r’çfÇVRÇÂtæ÷B6GW&VBs°¢6öç7BöÆ–6U&W÷'BÒFö7VÖVçBævWDVÆVÖVçD'”–B‚wöÆ–6U&W÷'Br’çfÇVRÇÂtæöæRs° ¢6öç7B&ö×BÒvVæW&FR&öfW76–öæÂf—'7Bæ÷F–f–6F–öâöbÆ÷72„däôÂ’–æ6–FVçB&W÷'Bæ'&F—fRf÷"F†RföÆÆ÷v–ær6öÆÆ—6–öâWfVçBâw&—FR–âF†—&BW'6öâÂ&öfW76–öæÂ–ç7W&æ6RöfÆVWBÖævVÖVçB7G–ÆRâ&Rf7GVÂæB6öæ6—6Râ2ÓB6VçFVæ6W2à ¤WfVçBFWF–Ç3 ¢ÒWfVçB”C¢ÅE‚Ó##bÓ3ƒCp¢ÒFFRõF–ÖS¢Ö&6‚#BÂ##bB#£CrĞ¢ÒÆö6F–öã¢’ÓRæ÷'F†&÷VæBÂæV"W†—BC"ÂÆ2fVv2Âå`¢ÒfV†–6ÆS¢Væ—B3Cƒ#Â##2f÷&BbÓS†fÆVWBfV†–6ÆR¢Ò7VVBB–×7C¢3B×€¢ÒrÔf÷&6S¢‚ã&r‡6WfW&R–×7B¢Ò†÷F÷26GW&VC¢G·†÷Fô6÷VçGÒöbrWf–FVæ6R†÷F÷0¢Ò÷F†W"'G’æÖS¢G¶÷æÖWĞ¢Ò÷F†W"'G’Æ–6Vç6RÆFS¢G¶÷ÆFWĞ¢Ò÷F†W"'G’–ç7W&æ6S¢G¶÷–ç7W&W'Ğ¢ÒöÆ–6R&W÷'C¢G·öÆ–6U&W÷'GÖ° ¢G'’°¢6öç7B&W2Òv—BfWF6‚‚rö’ö6†BrÂ°¢ÖWF†öC¢uõ5BrÀ¢†VFW'3¢²t6öçFVçBÕG—Rs¢vÆ–6F–öâö§6öârÒÀ¢&öG“¢¥4ôâç7G&–æv–g’‡²ÖW76vW3¢·²&öÆS¢wW6W"rÂ6öçFVçC¢&ö×BÕÒÒ¢Ò“°¢–b‚&W2æö²’F‡&÷ræWrW'&÷"‚t’W'&÷"r“°¢6öç7BFFÒv—B&W2æ§6öâ‚“°¢6†÷u&W÷'B†FFæ6öçFVçBÂ†÷Fô6÷VçBÂ÷æÖRÂ÷ÆFRÂ÷–ç7W&W"ÂöÆ–6U&W÷'B“°¢Ò6F6‚†W'"’°¢6öç7BfÆÆ&6²ÒöâÖ&6‚#BÂ##bÂB&÷†–ÖFVÇ’#£CrÒÂfÆVWBfV†–6ÆRVæ—B3Cƒ#ƒ##2f÷&BbÓS’÷W&FVB'’Ç—G‚ÖÖöæ—F÷&VBG&—fW"v2–çföÇfVB–â6öÆÆ—6–öâöâ’ÓRæ÷'F†&÷VæBæV"W†—BC"–âÆ2fVv2ÂæWfFâÇ—G‚FVÆVÖWG'’&V6÷&FVBâ–×7B7VVBöb3B×‚v—F‚rÖf÷&6R&VF–æröb‚ã&rÂ–æF–6F–ær6WfW&R–×7BWfVçBâG·†÷Fô6÷VçBâòF†RG&—fW"6GW&VBG·†÷Fô6÷VçGÒ†÷Föw&†–2Wf–FVæ6R—FV×2BF†R66VæRW6–ærF†R6öÆÆ—6–öä•Wf–FVæ6R6öÆÆV7F–öâv÷&¶fÆ÷ræ¢rwÒG¶÷æÖRÓÒuVæ¶æ÷vâròF†R÷F†W"'G’v2–FVçF–f–VB2G¶÷æÖWÒæ¢rwÒF†—2&W÷'B†2&VVâWFöÖF–6ÆÇ’vVæW&FVBg&öÒÇ—G‚WfVçBFFæBG&—fW"Ö6GW&VBWf–FVæ6Rf÷"däôÂ&ö6W76–æræ°¢6†÷u&W÷'B†fÆÆ&6²Â†÷Fô6÷VçBÂ÷æÖRÂ÷ÆFRÂ÷–ç7W&W"ÂöÆ–6U&W÷'B“°¢Ğ§Ğ ¦gVæ7F–öâ6†÷u&W÷'B†æ'&F—fRÂ†÷Fô6÷VçBÂ÷æÖRÂ÷ÆFRÂ÷–ç7W&W"ÂöÆ–6U&W÷'B’°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'DÆöF–ærr’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'D6öçFVçBr’ç7G–ÆRæF—7Æ’Òv&Æö6²s°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w&W÷'Dæ'&F—fRr’çFW‡D6öçFVçBÒæ'&F—fS° ¢6öç7BWf–FVæ6T6&BÒFö7VÖVçBævWDVÆVÖVçD'”–B‚vWf–FVæ6U7VÖÖ'”6&Br“°¢Wf–FVæ6T6&Bæ–ææW$…DÔÂÒ ¢ÆF—b7G–ÆSÒ&föçB×vV–v‡C£s²6öÆ÷#¢3D3ƒDdc²föçB×6—¦S£Gƒ²FW‡B×G&ç6f÷&Ó§WW&66S²ÆWGFW"×76–æs£ãWƒ²Ö&v–âÖ&÷GFöÓ£'ƒ²#äWf–FVæ6R6öÆÆV7FVCÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#å†÷F÷26GW&VCÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²#âG·†÷Fô6÷VçGÒöbsÂöF—cà¢ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#äÇ—G‚f–FVò6Æ—ÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²6öÆ÷#¢3f3F²#î)É2WFòÖ6GW&VCÂöF—cà¢ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#åFVÆVÖWG'’FFÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²6öÆ÷#¢3f3F²#î)É2WFòÖ6GW&VCÂöF—cà¢ÂöF—cæ° ¢6öç7B÷6&BÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v÷F†W%'G•7VÖÖ'”6&Br“°¢÷6&Bæ–ææW$…DÔÂÒ ¢ÆF—b7G–ÆSÒ&föçB×vV–v‡C£s²6öÆ÷#¢3D3ƒDdc²föçB×6—¦S£Gƒ²FW‡B×G&ç6f÷&Ó§WW&66S²ÆWGFW"×76–æs£ãWƒ²Ö&v–âÖ&÷GFöÓ£'ƒ²#ä÷F†W"'G“ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#äæÖSÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²#âG¶÷æÖWÓÂöF—cà¢ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#äÆ–6Vç6RÆFSÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²#âG¶÷ÆFWÓÂöF—cà¢ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#ä–ç7W&æ6SÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²#âG¶÷–ç7W&W'ÓÂöF—cà¢ÂöF—cà¢ÆF—b6Æ73Ò'FVÆVÖWG'’×&÷r#à¢ÆF—b7G–ÆSÒ&6öÆ÷#¢3ccsƒ“#²föçB×6—¦S£7ƒ²#åöÆ–6R&W÷'CÂöF—cà¢ÆF—b7G–ÆSÒ&föçB×6—¦S£7ƒ²föçB×vV–v‡C£c²#âG·öÆ–6U&W÷'GÓÂöF—cà¢ÂöF—cæ°§Ğ ¦gVæ7F–öâ7V&Ö—E&W÷'B‚’°¢6†÷uFö7B‚~)ÈR&W÷'B7V&Ö—GFVBFòfÆVWBÖævW"r“°¢6WEF–ÖV÷WB‚‚’Óâ6†÷uFö7B‚	ù:r6öæf—&ÖF–öâ6VçBFòFÆÖ&W'DÇ—G‚æ6öÒr’Â#“°§Ğ ¦gVæ7F–öâ6†&U&W÷'B‚’°¢6öç7BW&ÂÒv–æF÷ræÆö6F–öâæ‡&Vb²s÷&W÷'CÔÅE‚Ó##bÓ3ƒCrs°¢–b†æf–vF÷"æ6Æ—&ö&B’°¢æf–vF÷"æ6Æ—&ö&Bçw&—FUFW‡B‡W&Â’çF†Vâ‚‚’Óâ6†÷uFö7B‚	ùIr6†&RÆ–æ²6÷–VBr’“°¢ÒVÇ6R°¢6†÷uFö7B‚	ùIrÆ–æ³¢r²W&Â“°¢Ğ§Ğ ¦gVæ7F–öâ7F'D÷fW"‚’°¢7FFRæ7W'&VçE67&VVâÒ°¢7FFRç†÷F÷2ÒµÓ°¢7FFRç6fWG•ÒçVÆÃ°¢7FFRç6fWG•"ÒçVÆÃ°¢7FFRç6fWG•2ÒçVÆÃ°¢7FFRç&TÖ6†÷vâÒfÇ6S°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w6fWG•"r’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w6fWG•2r’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w6fWG•Br’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚w6fWG•&ö6VVBr’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'”–B‚vVÖW&vVæ7”×6rr’ç7G–ÆRæF—7Æ’ÒvæöæRs°¢Fö7VÖVçBçVW'•6VÆV7F÷$ÆÂ‚rç6fWG’Ö'Fâr’æf÷$V6‚†"Óâ"æ6Æ74Æ—7Bç&VÖ÷fR‚w6VÆV7FVBr’“°¢²v÷æÖRrÂv÷Æ–6Vç6RrÂv÷Æ–6Vç6U7FFRrÂv÷†öæRrÂv÷ÆFRrÂv÷Ö¶RrÂv÷6öÆ÷"rÂv÷–ç7W&W"rÂv÷öÆ–7’rÂv÷–ç7W&W%†öæRrÂwöÆ–6U&W÷'BrÂwöÆ–6T&FvRrÂwöÆ–6U†öæRuÒæf÷$V6‚†–BÓâ²Fö7VÖVçBævWDVÆVÖVçD'”–B†–B’çfÇVRÒrs²Fö7VÖVçBævWDVÆVÖVçD'”–B†–B’æ6Æ74Æ—7Bç&VÖ÷fR‚vö7"Öf–ÆÆVBr“²Ò“°¢òò&W6WB66â'WGFöç0¢²w66äDÄ'FârÂw66åÆFT'FârÂw66ä–ç4'FâuÒæf÷$V6‚†–BÓâ°¢6öç7B'FâÒFö7VÖVçBævWDVÆVÖVçD'”–B†–B“°¢–b†–BÓÓÒw66äDÄ'Fâr’'Fâæ–ææW$…DÔÂÒsÇ7â7G–ÆSÒ&föçB×6—¦S£#ƒ²#ï	úª£Â÷7ãâ66âG&—fW%Âw2Æ–6Vç6Rs°¢–b†–BÓÓÒw66åÆFT'Fâr’'Fâæ–ææW$…DÔÂÒsÇ7â7G–ÆSÒ&föçB×6—¦S£#ƒ²#ï	ù©sÂ÷7ãâ66âÆ–6Vç6RÆFRs°¢–b†–BÓÓÒw66ä–ç4'Fâr’'Fâæ–ææW$…DÔÂÒsÇ7â7G–ÆSÒ&föçB×6—¦S£#ƒ²#ï	ù8³Â÷7ãâ66â–ç7W&æ6R6&Bs°¢'Fâç7G–ÆRæ&6¶w&÷VæBÒrs°¢Ò“°¢võFõ67&VVâƒ“°§Ğ ¢òò)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y ¢òòDô5@¢òò)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y)Y ¦gVæ7F–öâ6†÷uFö7B†×6r’°¢6öç7BBÒFö7VÖVçBævWDVÆVÖVçD'”–B‚wFö7Br“°¢BçFW‡D6öçFVçBÒ×6s°¢Bç7G–ÆRæF—7Æ’Òv&Æö6²s°¢6WEF–ÖV÷WB‚‚’Óâ²Bç7G–ÆRæF—7Æ’ÒvæöæRs²ÒÂ3“°§Ğ ¢òò–æ—@§WFFT†VFW"ƒ“°£Â÷67&—Cà£Âö&öG“à£Âö‡FÖÃà®
