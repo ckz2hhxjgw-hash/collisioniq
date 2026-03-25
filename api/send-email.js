@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { to, eventId, narrative, opName, opPlate, opInsurer, policeReport, photoCount, photos } = req.body || {};
+  const { to, eventId, narrative, opName, opPlate, opInsurer, policeReport, photoCount, photos, scanPhotos, preCollisionTrack } = req.body || {};
 
   if (!to) return res.status(400).json({ error: 'Recipient email required' });
 
@@ -93,6 +93,47 @@ module.exports = async function handler(req, res) {
         </table>
       </div>
 
+      <!-- Pre-Collision Track -->
+      ${preCollisionTrack && preCollisionTrack.length > 0 ? `
+      <div style="margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🗺️ Pre-Collision Track · 10 Min Leading to Event</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <tr style="background:#f1f5f9;">
+            <th style="padding:6px 10px;text-align:left;color:#667892;font-weight:700;">Time</th>
+            <th style="padding:6px 10px;text-align:right;color:#667892;font-weight:700;">Speed</th>
+            <th style="padding:6px 10px;text-align:left;color:#667892;font-weight:700;">Status</th>
+          </tr>
+          ${preCollisionTrack.map(pt => {
+            const isImpact = pt.time === 'Impact';
+            const color = isImpact ? '#dc2626' : pt.speed >= 66 ? '#ea580c' : pt.speed >= 56 ? '#f59e0b' : '#16a34a';
+            const label = isImpact ? '💥 Impact' : pt.speed >= 66 ? '⚠ Above limit' : pt.speed >= 56 ? '↑ Elevated' : '✓ Normal';
+            return `<tr style="border-bottom:1px solid #f1f5f9;${isImpact ? 'background:#fef2f2;' : ''}">
+              <td style="padding:7px 10px;color:#374151;font-weight:${isImpact ? '700' : '400'};">${pt.time}</td>
+              <td style="padding:7px 10px;text-align:right;font-weight:700;color:${color};">${pt.speed} mph</td>
+              <td style="padding:7px 10px;color:${color};font-weight:600;">${label}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Source: Lytx telematics · I-15 N, approaching Exit 42, Las Vegas NV</div>
+      </div>` : ''}
+
+      <!-- Other Party Scan Photos -->
+      ${scanPhotos && (scanPhotos.dl || scanPhotos.plate || scanPhotos.insurance) ? `
+      <div style="margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Other Party Documentation</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          ${[
+            { key: 'dl',        label: "Driver's License", emoji: '🪪' },
+            { key: 'plate',     label: 'License Plate',    emoji: '🚗' },
+            { key: 'insurance', label: 'Insurance Card',   emoji: '📋' }
+          ].filter(item => scanPhotos[item.key]).map((item, i) => `
+          <div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;text-align:center;">
+            <img src="cid:scan_${item.key}" style="width:100%;height:100px;object-fit:cover;display:block;" alt="${item.label}" />
+            <div style="padding:5px 6px;font-size:11px;color:#667892;background:#f8fafc;">${item.emoji} ${item.label}</div>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
+
       <!-- Evidence -->
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:24px;">📷</span>
@@ -151,14 +192,23 @@ module.exports = async function handler(req, res) {
           to,
           subject,
           html: htmlBody,
-          attachments: photos && photos.length > 0
-            ? photos.map((p, i) => ({
-                filename: `photo${i + 1}.jpg`,
-                content: p.data.replace(/^data:image\/\w+;base64,/, ''),
-                content_type: 'image/jpeg',
-                content_id: `photo${i}`
-              }))
-            : undefined
+          attachments: [
+            ...(photos && photos.length > 0
+              ? photos.map((p, i) => ({
+                  filename: `evidence_photo${i + 1}.jpg`,
+                  content: p.data.replace(/^data:image\/\w+;base64,/, ''),
+                  content_type: 'image/jpeg',
+                  content_id: `photo${i}`
+                }))
+              : []),
+            ...(scanPhotos
+              ? [
+                  scanPhotos.dl        && { filename: 'drivers_license.jpg',  content: scanPhotos.dl.replace(/^data:image\/\w+;base64,/, ''),        content_type: 'image/jpeg', content_id: 'scan_dl' },
+                  scanPhotos.plate     && { filename: 'license_plate.jpg',    content: scanPhotos.plate.replace(/^data:image\/\w+;base64,/, ''),      content_type: 'image/jpeg', content_id: 'scan_plate' },
+                  scanPhotos.insurance && { filename: 'insurance_card.jpg',   content: scanPhotos.insurance.replace(/^data:image\/\w+;base64,/, ''), content_type: 'image/jpeg', content_id: 'scan_insurance' }
+                ].filter(Boolean)
+              : [])
+          ].filter(a => a) || undefined
         })
       });
       const emailData = await emailRes.json();
