@@ -623,6 +623,39 @@ function toggleLocationMap(btn) {
           .bindPopup('<b>Collision — I-15 N Exit 42</b><br>Mar 24, 2026 · 2:47 PM<br>34 mph · 8.2g');
 
         locationMapInstance.invalidateSize();
+
+        // Add current GPS location marker
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const gpsIcon = L.divIcon({
+                html: '<div style="background:#2563eb;color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(37,99,235,0.5);">📍 You are here</div>',
+                iconAnchor: [52, 10], className: ''
+              });
+              L.marker([lat, lng], { icon: gpsIcon })
+                .addTo(locationMapInstance)
+                .bindPopup(`<b>Your Current Location</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}<br><span style="color:#64748b;font-size:11px;">Accuracy ±${Math.round(pos.coords.accuracy)}m</span>`);
+              // Zoom to current location
+              locationMapInstance.setView([lat, lng], 16);
+              // Draw a subtle accuracy circle
+              L.circle([lat, lng], {
+                radius: pos.coords.accuracy,
+                color: '#2563eb', fillColor: '#93c5fd', fillOpacity: 0.15, weight: 1
+              }).addTo(locationMapInstance);
+            },
+            (err) => {
+              // Geolocation denied or unavailable — show a note on the map
+              const noteIcon = L.divIcon({
+                html: '<div style="background:#64748b;color:white;font-size:10px;font-weight:600;padding:3px 8px;border-radius:12px;white-space:nowrap;border:2px solid white;">📍 Location unavailable</div>',
+                iconAnchor: [70, 10], className: ''
+              });
+              L.marker([36.111, -115.176], { icon: noteIcon }).addTo(locationMapInstance);
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+          );
+        }
       }, 100);
     } else {
       locationMapInstance.invalidateSize();
@@ -738,9 +771,8 @@ function renderPhotoStep() {
 }
 
 function updateSkipBtn() {
-  const capturedCount = state.photos.filter(p => p).length;
   const skipBtn = document.getElementById('skipBtn');
-  skipBtn.textContent = capturedCount >= 1 ? 'Done' : 'Skip';
+  skipBtn.textContent = 'Skip';
 }
 
 function handlePhotoCapture(event) {
@@ -788,19 +820,13 @@ function nextPhotoStep() {
 }
 
 function skipPhoto() {
-  const capturedCount = state.photos.filter(p => p).length;
-  if (capturedCount >= 1) {
-    // "Done" behavior — exit evidence early
-    goToScreen(4);
+  state.photos[state.currentPhotoStep] = null;
+  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+    state.currentPhotoStep++;
+    renderPhotoStep();
+    renderPhotoStrip();
   } else {
-    state.photos[state.currentPhotoStep] = null;
-    if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
-      state.currentPhotoStep++;
-      renderPhotoStep();
-      renderPhotoStrip();
-    } else {
-      goToScreen(4);
-    }
+    goToScreen(4);
   }
 }
 
@@ -832,45 +858,96 @@ function scanOCR(type) {
   document.getElementById(inputMap[type]).click();
 }
 
-function processOCR(type, event) {
+async function processOCR(type, event) {
   if (!event.target.files[0]) return;
+  const file = event.target.files[0];
+
   // Show OCR processing overlay
   const overlay = document.getElementById('ocrOverlay');
   overlay.style.display = 'flex';
   const statusEl = document.getElementById('ocrStatusText');
 
   const messages = ['Scanning document…', 'Reading text…', 'Extracting fields…', 'Verifying data…'];
-  let i = 0;
+  let msgIdx = 0;
   const msgInterval = setInterval(() => {
-    if (i < messages.length) { statusEl.textContent = messages[i++]; }
-  }, 500);
+    if (msgIdx < messages.length) { statusEl.textContent = messages[msgIdx++]; }
+  }, 600);
 
-  setTimeout(() => {
+  try {
+    // Convert image to base64 for vision API
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Build prompt per document type
+    const prompts = {
+      dl: 'This is a driver\'s license. Extract: full name, license number, and state abbreviation. Reply ONLY with a JSON object like: {"name":"...","license":"...","state":"..."}. If a field is not visible, use an empty string.',
+      plate: 'This is a license plate photo. Extract the license plate number exactly as shown. Reply ONLY with a JSON object like: {"plate":"..."}. If not readable, use an empty string.',
+      insurance: 'This is an auto insurance card. Extract: insurance company name, policy number, and customer service phone number. Reply ONLY with a JSON object like: {"insurer":"...","policy":"...","phone":"..."}. If a field is not visible, use an empty string.'
+    };
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
+            { type: 'text', text: prompts[type] }
+          ]
+        }]
+      })
+    });
+
     clearInterval(msgInterval);
     overlay.style.display = 'none';
-    fillOCRData(type);
-  }, 2200);
+
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    // Extract the text content from the response
+    const raw = (data.content || data.choices?.[0]?.message?.content || '');
+    const text = typeof raw === 'string' ? raw : (raw[0]?.text || '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    const parsed = JSON.parse(jsonMatch[0]);
+    fillOCRData(type, parsed);
+  } catch (err) {
+    clearInterval(msgInterval);
+    overlay.style.display = 'none';
+    console.warn('OCR error:', err);
+    showToast('⚠️ Could not read document — please fill in manually');
+  }
 }
 
-function fillOCRData(type) {
+function fillOCRData(type, data) {
   if (type === 'dl') {
-    setFieldOCR('opName', 'James R. Thornton');
-    setFieldOCR('opLicense', 'NV8847291');
-    setFieldOCR('opLicenseState', 'NV');
-    setFieldOCR('opPhone', '');
-    showToast('✓ Driver\'s license scanned — 3 fields filled');
+    const filled = [];
+    if (data.name)    { setFieldOCR('opName', data.name);              filled.push('name'); }
+    if (data.license) { setFieldOCR('opLicense', data.license);        filled.push('license'); }
+    if (data.state)   { setFieldOCR('opLicenseState', data.state);     filled.push('state'); }
+    showToast(`✓ Driver's license scanned — ${filled.length} field${filled.length !== 1 ? 's' : ''} filled`);
     document.getElementById('scanDLBtn').innerHTML = '<span style="font-size:20px;">✅</span> License Scanned';
     document.getElementById('scanDLBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
   } else if (type === 'plate') {
-    setFieldOCR('opPlate', '7XYZ432');
-    showToast('✓ License plate scanned');
-    document.getElementById('scanPlateBtn').innerHTML = '<span style="font-size:20px;">✅</span> Plate Scanned: 7XYZ432';
+    if (data.plate) {
+      setFieldOCR('opPlate', data.plate);
+      showToast('✓ License plate scanned: ' + data.plate);
+      document.getElementById('scanPlateBtn').innerHTML = `<span style="font-size:20px;">✅</span> Plate Scanned: ${data.plate}`;
+    } else {
+      showToast('⚠️ Plate not readable — please fill in manually');
+      document.getElementById('scanPlateBtn').innerHTML = '<span style="font-size:20px;">⚠️</span> Plate unclear';
+    }
     document.getElementById('scanPlateBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
   } else if (type === 'insurance') {
-    setFieldOCR('opInsurer', 'State Farm Insurance');
-    setFieldOCR('opPolicy', 'SFP-2847-NV-03');
-    setFieldOCR('opInsurerPhone', '1-800-732-5246');
-    showToast('✓ Insurance card scanned — 3 fields filled');
+    const filled = [];
+    if (data.insurer) { setFieldOCR('opInsurer', data.insurer);        filled.push('insurer'); }
+    if (data.policy)  { setFieldOCR('opPolicy', data.policy);          filled.push('policy'); }
+    if (data.phone)   { setFieldOCR('opInsurerPhone', data.phone);     filled.push('phone'); }
+    showToast(`✓ Insurance card scanned — ${filled.length} field${filled.length !== 1 ? 's' : ''} filled`);
     document.getElementById('scanInsBtn').innerHTML = '<span style="font-size:20px;">✅</span> Insurance Scanned';
     document.getElementById('scanInsBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
   }
@@ -1022,8 +1099,29 @@ function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeRep
   document.getElementById('reportNarrative').textContent = narrative;
 
   const evidenceCard = document.getElementById('evidenceSummaryCard');
+
+  // Build photo review thumbnails for any captured photos
+  const capturedPhotos = state.photos.map((p, i) => ({ photo: p, step: EVIDENCE_STEPS[i], index: i })).filter(x => x.photo);
+  let photoGalleryHtml = '';
+  if (capturedPhotos.length > 0) {
+    const thumbsHtml = capturedPhotos.map(({ photo, step }) => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="width:72px;height:56px;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+          <img src="${photo.url}" style="width:100%;height:100%;object-fit:cover;" alt="${step ? step.label : 'Photo'}">
+        </div>
+        <div style="font-size:10px;color:#64748b;text-align:center;max-width:72px;line-height:1.2;">${step ? step.label : 'Photo'}</div>
+      </div>`).join('');
+    photoGalleryHtml = `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:#667892;font-weight:600;margin-bottom:8px;">Photo Review (${capturedPhotos.length} of 7)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">${thumbsHtml}</div>
+    </div>
+    <div style="height:1px;background:#e8edf4;margin-bottom:14px;"></div>`;
+  }
+
   evidenceCard.innerHTML = `
     <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
+    ${photoGalleryHtml}
     <div class="telemetry-row">
       <div style="color:#667892; font-size:13px;">Photos captured</div>
       <div style="font-size:13px; font-weight:600;">${photoCount} of 7</div>
