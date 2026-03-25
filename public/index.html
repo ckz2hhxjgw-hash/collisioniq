@@ -1086,7 +1086,7 @@ function renderSpeedTimeline() {
   }).join('');
 }
 
-amync function initReport() {
+async function initReport() {
   document.getElementById('reportLoading').style.display = 'block';
   document.getElementById('reportContent').style.display = 'none';
   document.getElementById('reportTimestamp').textContent = 'Generated ' + new Date().toLocaleString();
