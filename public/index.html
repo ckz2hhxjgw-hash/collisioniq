@@ -52,7 +52,7 @@
     .safety-btn.selected { background: #E5EEF2; border-color: #4C84FF; color: #4C84FF; }
     .report-text { background: #f8fafc; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #1B2431; white-space: pre-wrap; }
     .ocr-filled { border-color: #059669 !important; background: #f0fdf4 !important; }
-    #locationMap { height: 220px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+    #locationMap { height: 220px; width: 100%; border-radius: 10px; overflow: hidden; margin-top: 10px; }
     #preCollisionMap { height: 260px; border-radius: 10px; overflow: hidden; }
     .leaflet-container { font-family: 'Lato', sans-serif; }
     .map-toggle-btn { background: #f1f5f9; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #4C84FF; cursor: pointer; width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; }
@@ -236,7 +236,7 @@
         <div style="font-weight:700; color:#dc2626; font-size:16px; margin-bottom:6px;">Call 911 First</div>
         <div style="color:#667892; font-size:14px; margin-bottom:16px;">Ensure everyone's safety before documenting. Return to CollisionIQ when you're safe.</div>
         <button class="btn-danger" onclick="callEmergency()" style="margin-bottom:10px;">📞 Call 911</button>
-        <button class="btn-ghost" onclick="goToScreen(3)" style="font-size:14px; color:#9ca3af;">Continue to documentation anyway</button>
+        <button class="btn-ghost" onclick="goToScreen(3)" style="font-size:14px; color:#9cb3af;">Continue to documentation anyway</button>
       </div>
     </div>
 
@@ -1086,7 +1086,7 @@ function renderSpeedTimeline() {
   }).join('');
 }
 
-async function initReport() {
+amync function initReport() {
   document.getElementById('reportLoading').style.display = 'block';
   document.getElementById('reportContent').style.display = 'none';
   document.getElementById('reportTimestamp').textContent = 'Generated ' + new Date().toLocaleString();
@@ -1152,7 +1152,7 @@ function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeRep
     photoGalleryHtml = `
     <div style="margin-bottom:14px;">
       <div style="font-size:12px;color:#667892;font-weight:600;margin-bottom:8px;">Photo Review (${capturedPhotos.length} of 7)</div>
-      <div style="display:flex;flew-wrap:wrap;gap:8px;">${thumbsHtml}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">${thumbsHtml}</div>
     </div>
     <div style="height:1px;background:#e8edf4;margin-bottom:14px;"></div>`;
   }
@@ -1174,19 +1174,37 @@ function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeRep
     </div>`;
 
   const opCard = document.getElementById('otherPartySummaryCard');
+  // Photo-captured-but-unread indicators: show when snapshot exists but field was not filled
+  const photoHint = (label, photoUrl) => photoUrl
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;">
+        <img src="${photoUrl}" style="width:32px;height:24px;object-fit:cover;border-radius:4px;flex-shrink:0;">
+        <span style="font-size:11px;color:#92400e;font-weight:600;">📷 Photo captured — pending review</span>
+       </div>` : '';
+  const nameIsEmpty   = !opName    || opName    === 'Unknown';
+  const plateIsEmpty  = !opPlate   || opPlate   === 'Not captured';
+  const insurIsEmpty  = !opInsurer || opInsurer === 'Not captured';
   opCard.innerHTML = `
     <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Name</div>
-      <div style="font-size:13px; font-weight:600;">${opName}</div>
+    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div style="display:flex;justify-content:space-between;width:100%;">
+        <div style="color:#667892; font-size:13px;">Name</div>
+        <div style="font-size:13px; font-weight:600;">${nameIsEmpty ? 'Not entered' : opName}</div>
+      </div>
+      ${nameIsEmpty ? photoHint('DL', state.scanPhotos.dl) : ''}
     </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">License Plate</div>
-      <div style="font-size:13px; font-weight:600;">${opPlate}</div>
+    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div style="display:flex;justify-content:space-between;width:100%;">
+        <div style="color:#667892; font-size:13px;">License Plate</div>
+        <div style="font-size:13px; font-weight:600;">${plateIsEmpty ? 'Not entered' : opPlate}</div>
+      </div>
+      ${plateIsEmpty ? photoHint('Plate', state.scanPhotos.plate) : ''}
     </div>
-    <div class="telemetry-row">
-      <div style="color:#667892; font-size:13px;">Insurance</div>
-      <div style="font-size:13px; font-weight:600;">${opInsurer}</div>
+    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div style="display:flex;justify-content:space-between;width:100%;">
+        <div style="color:#667892; font-size:13px;">Insurance</div>
+        <div style="font-size:13px; font-weight:600;">${insurIsEmpty ? 'Not entered' : opInsurer}</div>
+      </div>
+      ${insurIsEmpty ? photoHint('Insurance', state.scanPhotos.insurance) : ''}
     </div>
     <div class="telemetry-row">
       <div style="color:#667892; font-size:13px;">Police Report</div>
