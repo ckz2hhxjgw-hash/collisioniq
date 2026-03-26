@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "AI-directed driver-facing mobile web app for FNOL collision evidence collection",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.0"
+    "@anthropic-ai/sdk": "^0.24.0",
+    "@resend/node": "^3.2.0"
   },
   "engines": {
     "node": ">=18"
