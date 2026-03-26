@@ -1,227 +1,259 @@
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+import { Resend } from '@resend/node';
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const { to, eventId, narrative, opName, opPlate, opInsurer, policeReport, photoCount, photos, scanPhotos, preCollisionTrack } = req.body || {};
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-  if (!to) return res.status(400).json({ error: 'Recipient email required' });
+  const {
+    to,
+    eventId = 'LTX-2026-03847',
+    narrative,
+    opName = 'Unknown',
+    opPlate = 'Not captured',
+    opInsurer = 'Not captured',
+    policeReport = 'None',
+    photoCount = 0,
+    photos = [],
+    scanPhotos = {},
+    preCollisionTrack = []
+  } = req.body;
 
-  // Build HTML email body
-  const now = new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' });
-  const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <div style="max-width:600px;margin:32px auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  if (!to) {
+    return res.status(400).json({ error: 'Missing recipient email' });
+  }
 
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#1B2431,#2d3f55);padding:28px 32px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;">CollisionIQ by Lytx</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.65);margin-top:4px;">Fleet Incident Report — First Notification of Loss</div>
-    </div>
+  // Speed color helper
+  function speedColor(mph, isImpact) {
+    if (isImpact) return '#dc2626';
+    if (mph > 65) return '#ea580c';
+    if (mph > 55) return '#f59e0b';
+    return '#16a34a';
+  }
 
-    <!-- Alert Banner -->
-    <div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:14px 32px;display:flex;align-items:center;gap:10px;">
-      <span style="font-size:20px;">💥</span>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:#dc2626;">COLLISION EVENT DETECTED</div>
-        <div style="font-size:12px;color:#ef4444;margin-top:2px;">Event ID: ${eventId || 'LTX-2026-03847'} &nbsp;·&nbsp; Generated: ${now}</div>
+  // Pre-collision speed timeline rows
+  const timelineRows = preCollisionTrack.map(pt => {
+    const isImpact = pt.time === 'Impact';
+    const color = speedColor(pt.speed, isImpact);
+    const barWidth = Math.min(Math.round(pt.speed * 1.8), 180);
+    return `
+      <tr>
+        <td style="padding:6px 0;width:68px;font-size:13px;color:#667892;white-space:nowrap;">${pt.time}</td>
+        <td style="padding:6px 8px;">
+          <div style="height:8px;width:${barWidth}px;background:${color};border-radius:4px;min-width:16px;"></div>
+        </td>
+        <td style="padding:6px 0;font-size:13px;font-weight:700;color:${isImpact ? '#dc2626' : '#1B2431'};text-align:right;white-space:nowrap;width:72px;">${isImpact ? '&#x1F4A5; ' : ''}${pt.speed} mph</td>
+      </tr>
+      <tr><td colspan="3"><div style="height:1px;background:#e8edf4;"></div></td></tr>`;
+  }).join('');
+
+  // Evidence photos grid
+  const evidencePhotosHtml = photos.length > 0 ? (() => {
+    const cols = Math.min(photos.length, 4);
+    const colPct = Math.floor(100 / cols);
+    const cells = photos.map(p => `
+      <td style="padding:0 5px 10px 0;vertical-align:top;width:${colPct}%;">
+        <div style="border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;">
+          <img src="${p.data}" width="100%" style="display:block;height:64px;object-fit:cover;" alt="${p.label}">
+        </div>
+        <div style="font-size:10px;color:#64748b;text-align:center;margin-top:4px;line-height:1.3;">${p.label}</div>
+      </td>`).join('');
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:12px;color:#667892;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Evidence Photos (${photos.length} of 7)</div>
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>${cells}</tr></table>
       </div>
-    </div>
+      <div style="height:1px;background:#e8edf4;margin-bottom:14px;"></div>`;
+  })() : '';
 
-    <div style="padding:28px 32px;">
+  // Other Party field renderer — shows value, captured photo, or "Not captured"
+  const renderOpField = (label, value, isEmpty, photoData) => {
+    if (!isEmpty) {
+      return `
+        <tr>
+          <td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">${label}</td>
+          <td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #E5EEF2;">${value}</td>
+        </tr>`;
+    } else if (photoData) {
+      return `
+        <tr>
+          <td colspan="2" style="padding:10px 0;border-bottom:1px solid #E5EEF2;">
+            <div style="color:#667892;font-size:13px;font-weight:600;margin-bottom:8px;">${label}</div>
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="padding-right:10px;vertical-align:middle;">
+                <img src="${photoData}" style="height:52px;width:auto;max-width:120px;object-fit:cover;border-radius:7px;border:2px solid #e2e8f0;display:block;">
+              </td>
+              <td style="font-size:11px;color:#667892;font-style:italic;vertical-align:middle;">Image captured &middot; details not extracted</td>
+            </tr></table>
+          </td>
+        </tr>`;
+    } else {
+      return `
+        <tr>
+          <td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">${label}</td>
+          <td style="padding:9px 0;font-size:13px;font-weight:600;color:#94a3b8;text-align:right;border-bottom:1px solid #E5EEF2;">Not captured</td>
+        </tr>`;
+    }
+  };
 
-      <!-- Event Details -->
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Event Details</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;width:45%;">Date &amp; Time</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#1B2431;">March 24, 2026 at 2:47 PM</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;">Location</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#1B2431;">I-15 N, Exit 42 · Las Vegas, NV</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;">Vehicle</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#1B2431;">Unit #4821 · 2023 Ford F-150</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;">Speed at Impact</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#dc2626;">34 mph</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;font-size:13px;color:#667892;">G-Force</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#dc2626;">8.2g (Severe)</td>
-          </tr>
-        </table>
+  const nameIsEmpty   = !opName    || opName    === 'Unknown';
+  const plateIsEmpty  = !opPlate   || opPlate   === 'Not captured';
+  const insurIsEmpty  = !opInsurer || opInsurer === 'Not captured';
+
+  const generatedAt = new Date().toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+  });
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CollisionIQ Incident Report</title>
+</head>
+<body style="margin:0;padding:0;background:#ECECEC;font-family:'Helvetica Neue',Arial,sans-serif;color:#1B2431;">
+
+  <!-- HEADER -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1B2431;">
+    <tr><td style="padding:14px 20px;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="padding-right:14px;vertical-align:middle;">
+          <img src="https://www.lytx.com/img/logo-light.svg" alt="Lytx" height="26" style="display:block;">
+        </td>
+        <td style="border-left:1px solid rgba(255,255,255,0.22);padding-left:14px;vertical-align:middle;">
+          <span style="color:white;font-weight:700;font-size:15px;letter-spacing:-0.2px;">CollisionIQ</span>
+        </td>
+      </tr></table>
+    </td></tr>
+  </table>
+
+  <!-- BODY -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td style="padding:18px 16px 24px;">
+
+      <!-- Title row -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+        <tr>
+          <td>
+            <div style="font-size:18px;font-weight:700;color:#4C84FF;">Incident Report</div>
+            <div style="color:#667892;font-size:12px;margin-top:3px;">Generated ${generatedAt}</div>
+          </td>
+          <td style="text-align:right;vertical-align:top;">
+            <span style="background:#E5EEF2;color:#4C84FF;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">${eventId}</span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- AI Narrative -->
+      <div style="background:white;border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(27,36,49,0.08);">
+        <div style="font-weight:700;color:#4C84FF;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">AI-Generated Narrative</div>
+        <div style="background:#f8fafc;border-radius:8px;padding:14px;font-size:14px;line-height:1.7;color:#1B2431;">${narrative || '(Narrative unavailable)'}</div>
       </div>
 
-      <!-- Narrative -->
-      ${narrative ? `
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Incident Narrative</div>
-        <div style="background:#f8fafc;border-left:3px solid #4C84FF;border-radius:0 8px 8px 0;padding:14px 16px;font-size:13px;color:#374151;line-height:1.6;">${narrative.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-      </div>` : ''}
-
-      <!-- Other Party -->
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Other Party</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;width:45%;">Name</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:${(!opName || opName === 'Unknown') ? '#94a3b8' : '#1B2431'};">${(!opName || opName === 'Unknown') ? '— not captured' : opName}</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;">License Plate</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:${(!opPlate || opPlate === 'Not captured') ? '#94a3b8' : '#1B2431'};">${(!opPlate || opPlate === 'Not captured') ? '— not captured' : opPlate}</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px 0;font-size:13px;color:#667892;">Insurance</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:${(!opInsurer || opInsurer === 'Not captured') ? '#94a3b8' : '#1B2431'};">${(!opInsurer || opInsurer === 'Not captured') ? '— not captured' : opInsurer}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;font-size:13px;color:#667892;">Police Report</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#1B2431;">${policeReport || 'None'}</td>
-          </tr>
+      <!-- Event Summary -->
+      <div style="background:white;border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(27,36,49,0.08);">
+        <div style="font-weight:700;color:#4C84FF;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Event Summary</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Date &amp; Time</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #E5EEF2;">Mar 24, 2026 &middot; 2:47 PM</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Location</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #E5EEF2;">I-15 N, Exit 42, Las Vegas NV</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Vehicle</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #E5EEF2;">Unit #4821 &mdash; 2023 Ford F-150</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Speed at Impact</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;color:#c2410c;border-bottom:1px solid #E5EEF2;">34 mph</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;">G-Force</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;color:#dc2626;">8.2g (Severe)</td></tr>
         </table>
       </div>
 
       <!-- Pre-Collision Track -->
-      ${preCollisionTrack && preCollisionTrack.length > 0 ? `
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🗺️ Pre-Collision Track · 10 Min Leading to Event</div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <tr style="background:#f1f5f9;">
-            <th style="padding:6px 10px;text-align:left;color:#667892;font-weight:700;">Time</th>
-            <th style="padding:6px 10px;text-align:right;color:#667892;font-weight:700;">Speed</th>
-            <th style="padding:6px 10px;text-align:left;color:#667892;font-weight:700;">Status</th>
-          </tr>
-          ${preCollisionTrack.map(pt => {
-            const isImpact = pt.time === 'Impact';
-            const color = isImpact ? '#dc2626' : pt.speed >= 66 ? '#ea580c' : pt.speed >= 56 ? '#f59e0b' : '#16a34a';
-            const label = isImpact ? '💥 Impact' : pt.speed >= 66 ? '⚠ Above limit' : pt.speed >= 56 ? '↑ Elevated' : '✓ Normal';
-            return `<tr style="border-bottom:1px solid #f1f5f9;${isImpact ? 'background:#fef2f2;' : ''}">
-              <td style="padding:7px 10px;color:#374151;font-weight:${isImpact ? '700' : '400'};">${pt.time}</td>
-              <td style="padding:7px 10px;text-align:right;font-weight:700;color:${color};">${pt.speed} mph</td>
-              <td style="padding:7px 10px;color:${color};font-weight:600;">${label}</td>
-            </tr>`;
-          }).join('')}
+      <div style="background:white;border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(27,36,49,0.08);">
+        <div style="font-weight:700;color:#4C84FF;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">&#x1F5FA;&#xFE0F; Pre-Collision Track</div>
+        <div style="font-size:12px;color:#667892;margin-bottom:14px;">10 min leading to event &middot; Speed &middot; Weather &middot; Traffic</div>
+
+        <!-- Conditions -->
+        <div style="margin-bottom:14px;">
+          <span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:16px;font-size:11px;font-weight:700;margin:0 4px 4px 0;">&#x2600;&#xFE0F; Clear &middot; 72&deg;F</span>
+          <span style="display:inline-block;background:#f0fdf4;color:#15803d;padding:4px 8px;border-radius:16px;font-size:11px;font-weight:700;margin:0 4px 4px 0;">&#x1F6E3;&#xFE0F; Dry roads</span>
+          <span style="display:inline-block;background:#fff7ed;color:#c2410c;padding:4px 8px;border-radius:16px;font-size:11px;font-weight:700;margin:0 4px 4px 0;">&#x1F6A6; Moderate traffic</span>
+          <span style="display:inline-block;background:#f3e8ff;color:#7e22ce;padding:4px 8px;border-radius:16px;font-size:11px;font-weight:700;margin:0 4px 4px 0;">&#x1F4E1; Lytx telemetry</span>
+        </div>
+
+        <!-- Map link -->
+        <div style="margin-bottom:14px;">
+          <a href="https://www.google.com/maps/search/?api=1&query=36.154,-115.168" style="display:inline-block;background:#f1f5f9;border:1.5px solid #E5EEF2;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;color:#4C84FF;text-decoration:none;">&#x1F5FA;&#xFE0F; View Impact Location on Map &rarr;</a>
+        </div>
+
+        <!-- Speed timeline -->
+        <div style="background:#f8fafc;border-radius:8px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:#667892;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Speed Timeline</div>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">${timelineRows}</table>
+        </div>
+
+        <!-- Legend -->
+        <div style="margin-top:10px;">
+          <span style="margin-right:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;color:#667892;">&le;55 mph</span></span>
+          <span style="margin-right:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;color:#667892;">56&ndash;65 mph</span></span>
+          <span style="margin-right:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;color:#667892;">66&ndash;75 mph</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;color:#667892;">Impact</span></span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:10px;line-height:1.5;">&#9432; Weather and traffic data are simulated for this demo. Production integration pulls live data from Lytx telematics, NOAA, and real-time traffic APIs.</div>
+      </div>
+
+      <!-- Evidence Collected -->
+      <div style="background:white;border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(27,36,49,0.08);">
+        <div style="font-weight:700;color:#4C84FF;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Evidence Collected</div>
+        ${evidencePhotosHtml}
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Photos captured</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #E5EEF2;">${photoCount} of 7</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;border-bottom:1px solid #E5EEF2;">Lytx video clip</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;color:#16a34a;border-bottom:1px solid #E5EEF2;">&#x2713; Auto-captured</td></tr>
+          <tr><td style="padding:9px 0;color:#667892;font-size:13px;">Telemetry data</td><td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;color:#16a34a;">&#x2713; Auto-captured</td></tr>
         </table>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Source: Lytx telematics · I-15 N, approaching Exit 42, Las Vegas NV</div>
-      </div>` : ''}
+      </div>
 
-      <!-- Other Party Scan Photos -->
-      ${scanPhotos && (scanPhotos.dl || scanPhotos.plate || scanPhotos.insurance) ? `
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Other Party Documentation</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-          ${[
-            { key: 'dl',        label: "Driver's License", emoji: '🪪' },
-            { key: 'plate',     label: 'License Plate',    emoji: '🚗' },
-            { key: 'insurance', label: 'Insurance Card',   emoji: '📋' }
-          ].filter(item => scanPhotos[item.key]).map((item, i) => `
-          <div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;text-align:center;">
-            <img src="cid:scan_${item.key}" style="width:100%;height:100px;object-fit:cover;display:block;" alt="${item.label}" />
-            <div style="padding:5px 6px;font-size:11px;color:#667892;background:#f8fafc;">${item.emoji} ${item.label}</div>
-          </div>`).join('')}
-        </div>
-      </div>` : ''}
+      <!-- Other Party -->
+      <div style="background:white;border-radius:12px;padding:18px;margin-bottom:24px;box-shadow:0 1px 4px rgba(27,36,49,0.08);">
+        <div style="font-weight:700;color:#4C84FF;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Other Party</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${renderOpField('Name', opName, nameIsEmpty, scanPhotos.dl)}
+          ${renderOpField('License Plate', opPlate, plateIsEmpty, scanPhotos.plate)}
+          ${renderOpField('Insurance', opInsurer, insurIsEmpty, scanPhotos.insurance)}
+          <tr>
+            <td style="padding:9px 0;color:#667892;font-size:13px;">Police Report</td>
+            <td style="padding:9px 0;font-size:13px;font-weight:600;text-align:right;">${policeReport}</td>
+          </tr>
+        </table>
+      </div>
 
-      <!-- Evidence -->
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:24px;">📷</span>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#16a34a;">${photoCount || 0} of 7 evidence photos captured</div>
-          <div style="font-size:12px;color:#4ade80;margin-top:2px;">Lytx video clip &amp; telematics auto-captured ✓</div>
+      <!-- Footer -->
+      <div style="text-align:center;padding-bottom:8px;">
+        <div style="font-size:11px;color:#94a3b8;line-height:1.7;">
+          Generated by CollisionIQ &middot; Powered by Lytx<br>
+          Automatically generated from Lytx event data for FNOL processing &middot; Event ID: ${eventId}
         </div>
       </div>
 
-      <!-- Evidence Photos -->
-      ${photos && photos.length > 0 ? `
-      <div style="margin-bottom:24px;">
-        <div style="font-size:11px;font-weight:700;color:#4C84FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Evidence Photos (${photos.length})</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
-          ${photos.map((p, i) => `
-          <div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">
-            <img src="cid:photo${i}" style="width:100%;height:140px;object-fit:cover;display:block;" alt="${(p.label || 'Photo ' + (i+1)).replace(/"/g,'&quot;')}" />
-            <div style="padding:6px 8px;font-size:11px;color:#667892;background:#f8fafc;">${(p.label || 'Photo ' + (i+1)).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-          </div>`).join('')}
-        </div>
-      </div>` : ''}
+    </td></tr>
+  </table>
 
-      <!-- CTA -->
-      <div style="text-align:center;padding-top:8px;">
-        <a href="https://collisioniq.vercel.app" style="display:inline-block;background:linear-gradient(135deg,#4C84FF,#7C4DFF);color:white;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;letter-spacing:0.2px;">View Full Report →</a>
-      </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center;">
-      <div style="font-size:11px;color:#94a3b8;">This report was automatically generated by CollisionIQ, powered by Lytx telematics and Claude AI.</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">© 2026 Lytx, Inc. · <a href="https://collisioniq.vercel.app" style="color:#4C84FF;text-decoration:none;">collisioniq.vercel.app</a></div>
-    </div>
-
-  </div>
 </body>
 </html>`;
 
-  const subject = `CollisionIQ Incident Report — ${eventId || 'LTX-2026-03847'} · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'CollisionIQ <reports@collisioniq.lytx.com>',
+      to: [to],
+      subject: `CollisionIQ Incident Report \u2014 ${eventId}`,
+      html
+    });
 
-  // Try Resend (https://resend.com) if API key is set
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
-
-  if (RESEND_API_KEY) {
-    try {
-      const emailRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: FROM_EMAIL,
-          to,
-          subject,
-          html: htmlBody,
-          attachments: [
-            ...(photos && photos.length > 0
-              ? photos.map((p, i) => ({
-                  filename: `evidence_photo${i + 1}.jpg`,
-                  content: p.data.replace(/^data:image\/\w+;base64,/, ''),
-                  content_type: 'image/jpeg',
-                  content_id: `photo${i}`
-                }))
-              : []),
-            ...(scanPhotos
-              ? [
-                  scanPhotos.dl        && { filename: 'drivers_license.jpg',  content: scanPhotos.dl.replace(/^data:image\/\w+;base64,/, ''),        content_type: 'image/jpeg', content_id: 'scan_dl' },
-                  scanPhotos.plate     && { filename: 'license_plate.jpg',    content: scanPhotos.plate.replace(/^data:image\/\w+;base64,/, ''),      content_type: 'image/jpeg', content_id: 'scan_plate' },
-                  scanPhotos.insurance && { filename: 'insurance_card.jpg',   content: scanPhotos.insurance.replace(/^data:image\/\w+;base64,/, ''), content_type: 'image/jpeg', content_id: 'scan_insurance' }
-                ].filter(Boolean)
-              : [])
-          ].filter(a => a) || undefined
-        })
-      });
-      const emailData = await emailRes.json();
-      if (!emailRes.ok) throw new Error(emailData.message || 'Resend API error');
-      return res.json({ success: true, provider: 'resend', id: emailData.id });
-    } catch (err) {
-      console.error('Resend error:', err);
-      return res.status(500).json({ error: err.message });
+    if (error) {
+      console.error('Resend error:', error);
+      return res.status(500).json({ error: error.message || 'Failed to send email' });
     }
-  }
 
-  // Fallback: demo mode — log and return success so the UI confirms
-  console.log(`[CollisionIQ Demo] Email report for event ${eventId} would be sent to: ${to}`);
-  console.log(`Subject: ${subject}`);
-  return res.json({ success: true, provider: 'demo', message: 'Demo mode — add RESEND_API_KEY env var to send real emails' });
-};
+    return res.status(200).json({ success: true, id: data?.id });
+  } catch (err) {
+    console.error('Send email error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to send email' });
+  }
+}
