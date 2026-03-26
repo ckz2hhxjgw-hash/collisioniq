@@ -60,6 +60,7 @@
     .speed-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
     .speed-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -1303,6 +1304,32 @@ async function sendEmailReport() {
     time: pt[3], speed: pt[2], lat: pt[0], lng: pt[1]
   }));
 
+  // Capture pre-collision map as static image for email
+  let mapImageData = null;
+  try {
+    const mapEl = document.getElementById('preCollisionMap');
+    if (mapEl && typeof html2canvas !== 'undefined' && preCollisionMapInstance) {
+      const screenEl = mapEl.closest('.screen') || mapEl.parentElement;
+      const wasHidden = screenEl && window.getComputedStyle(screenEl).display === 'none';
+      if (wasHidden) {
+        screenEl.style.display = 'flex';
+        screenEl.style.visibility = 'hidden';
+        screenEl.style.position = 'absolute';
+        screenEl.style.left = '-9999px';
+      }
+      preCollisionMapInstance.invalidateSize();
+      await new Promise(r => setTimeout(r, 800));
+      const mapCanvas = await html2canvas(mapEl, { useCORS: true, logging: false, scale: 1 });
+      mapImageData = mapCanvas.toDataURL('image/png');
+      if (wasHidden) {
+        screenEl.style.display = '';
+        screenEl.style.visibility = '';
+        screenEl.style.position = '';
+        screenEl.style.left = '';
+      }
+    }
+  } catch(mapErr) { console.warn('Map capture failed:', mapErr); }
+
   try {
     const res = await fetch('/api/send-email', {
       method: 'POST',
@@ -1318,7 +1345,8 @@ async function sendEmailReport() {
         photoCount,
         photos: photoList,
         scanPhotos,
-        preCollisionTrack
+        preCollisionTrack,
+        mapImageData
       })
     });
 
