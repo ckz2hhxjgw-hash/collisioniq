@@ -726,7 +726,8 @@ function callEmergency() {
 // ═══════════════════════════
 function initPhotoStep() {
   state.currentPhotoStep = 0;
-  state.photos = [];
+  // Don't reset photos here — preserves captures when user navigates back from screen 4.
+  // Photos are only wiped in startOver().
   renderPhotoStep();
   renderPhotoStrip();
 }
@@ -1190,38 +1191,36 @@ function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeRep
     </div>`;
 
   const opCard = document.getElementById('otherPartySummaryCard');
-  // Photo-captured-but-unread indicators: show when snapshot exists but field was not filled
-  const photoHint = (label, photoUrl) => photoUrl
-    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;">
-        <img src="${photoUrl}" style="width:32px;height:24px;object-fit:cover;border-radius:4px;flex-shrink:0;">
-        <span style="font-size:11px;color:#92400e;font-weight:600;">📷 Photo captured — pending review</span>
-       </div>` : '';
+  // Render each Other Party field: show value if filled, show captured photo if available, or "Not captured"
+  const renderOpField = (label, value, isEmpty, photoUrl) => {
+    if (!isEmpty) {
+      return `<div class="telemetry-row">
+        <div style="color:#667892; font-size:13px;">${label}</div>
+        <div style="font-size:13px; font-weight:600;">${value}</div>
+      </div>`;
+    } else if (photoUrl) {
+      return `<div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:12px;">
+        <div style="color:#667892; font-size:13px; font-weight:600;">${label}</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="${photoUrl}" style="height:52px;width:auto;max-width:130px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <span style="font-size:11px;color:#667892;font-style:italic;">Image captured · details not extracted</span>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="telemetry-row">
+        <div style="color:#667892; font-size:13px;">${label}</div>
+        <div style="font-size:13px; font-weight:600; color:#94a3b8;">Not captured</div>
+      </div>`;
+    }
+  };
   const nameIsEmpty   = !opName    || opName    === 'Unknown';
   const plateIsEmpty  = !opPlate   || opPlate   === 'Not captured';
   const insurIsEmpty  = !opInsurer || opInsurer === 'Not captured';
   opCard.innerHTML = `
     <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
-    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
-      <div style="display:flex;justify-content:space-between;width:100%;">
-        <div style="color:#667892; font-size:13px;">Name</div>
-        <div style="font-size:13px; font-weight:600;">${nameIsEmpty ? 'Not entered' : opName}</div>
-      </div>
-      ${nameIsEmpty ? photoHint('DL', state.scanPhotos.dl) : ''}
-    </div>
-    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
-      <div style="display:flex;justify-content:space-between;width:100%;">
-        <div style="color:#667892; font-size:13px;">License Plate</div>
-        <div style="font-size:13px; font-weight:600;">${plateIsEmpty ? 'Not entered' : opPlate}</div>
-      </div>
-      ${plateIsEmpty ? photoHint('Plate', state.scanPhotos.plate) : ''}
-    </div>
-    <div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
-      <div style="display:flex;justify-content:space-between;width:100%;">
-        <div style="color:#667892; font-size:13px;">Insurance</div>
-        <div style="font-size:13px; font-weight:600;">${insurIsEmpty ? 'Not entered' : opInsurer}</div>
-      </div>
-      ${insurIsEmpty ? photoHint('Insurance', state.scanPhotos.insurance) : ''}
-    </div>
+    ${renderOpField('Name', opName, nameIsEmpty, state.scanPhotos.dl)}
+    ${renderOpField('License Plate', opPlate, plateIsEmpty, state.scanPhotos.plate)}
+    ${renderOpField('Insurance', opInsurer, insurIsEmpty, state.scanPhotos.insurance)}
     <div class="telemetry-row">
       <div style="color:#667892; font-size:13px;">Police Report</div>
       <div style="font-size:13px; font-weight:600;">${policeReport}</div>
@@ -1239,7 +1238,7 @@ async function sendEmailReport() {
   const email = (input.value || '').trim();
 
   // Basic validation
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]*$/.test(email)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     input.style.borderColor = '#dc2626';
     input.placeholder = 'Please enter a valid email…';
     setTimeout(() => { input.style.borderColor = '#e2e8f0'; input.placeholder = 'Enter email address…'; }, 2000);
@@ -1261,8 +1260,10 @@ async function sendEmailReport() {
   const photoCount = state.photos.filter(p => p).length;
 
   // Helper: resize any blob/data URL → JPEG base64 at max dimension
+  // src may be a string URL (scan photos) or a photo object {url, name, mock} (evidence photos)
   const toJpeg = (src, maxPx, quality) => new Promise(resolve => {
-    if (!src) return resolve(null);
+    const url = (src && typeof src === 'object') ? src.url : src;
+    if (!url) return resolve(null);
     const img = new Image();
     img.onload = () => {
       const scale = Math.min(1, maxPx / Math.max(img.width || 1, img.height || 1));
@@ -1273,11 +1274,11 @@ async function sendEmailReport() {
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => resolve(null);
-    img.src = src;
+    img.src = url;
   });
 
-  // Convert evidence photos
-  const photoLabels = ['Front damage','Rear damage','Driver side','Passenger side','License plate','Scene overview','Other party vehicle'];
+  // Convert evidence photos — labels match EVIDENCE_STEPS order
+  const photoLabels = ['Your vehicle — driver side','Your vehicle — damage close-up','Your vehicle — license plate','Other vehicle — front','Other vehicle — damage','Overall scene','Road conditions / signage'];
   const photoList = (await Promise.all(
     state.photos.map(async (src, i) => {
       const data = await toJpeg(src, 800, 0.75);
@@ -1390,7 +1391,7 @@ function showToast(msg) {
 }
 
 // Init
-updateHeader(1);
+updateHeder(1);
 </script>
 </body>
 </html>
