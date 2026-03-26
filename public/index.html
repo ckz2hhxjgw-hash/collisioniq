@@ -1094,7 +1094,7 @@ function renderPreCollisionMap() {
         if (typeof html2canvas !== 'undefined') {
           const mapEl = document.getElementById('preCollisionMap');
           const mapCanvas = await html2canvas(mapEl, { useCORS: true, logging: false, scale: 1 });
-          window._preCollisionMapImage = mapCanvas.toDataURL('image/png');
+          window._preCollisionMapImage = mapCanvas.toDataURL('image/jpeg', 0.72);
         }
       } catch(e) { console.warn('Map pre-capture failed:', e); }
     }, 1500);
@@ -1154,7 +1154,9 @@ Event Details:
       body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] })
     });
     if (!res.ok) throw new Error('API error');
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { throw new Error('Server error (HTTP ' + res.status + '): ' + text.substring(0, 200)); }
     showReport(data.content, photoCount, opName, opPlate, opInsurer, policeReport);
   } catch (err) {
     const fallback = `On March 24, 2026, at approximately 2:47 PM, fleet vehicle Unit #4821 (2023 Ford F-150) operated by a Lytx-monitored driver was involved in a collision on I-15 Northbound near Exit 42 in Las Vegas, Nevada. Lytx telemetry recorded an impact speed of 34 mph with a g-force reading of 8.2g, indicating a severe impact event. ${photoCount > 0 ? `The driver captured ${photoCount} photographic evidence items at the scene using the CollisionIQ evidence collection workflow.` : ''} ${opName !== 'Unknown' ? `The other party was identified as ${opName}.` : ''} This report has been automatically generated from Lytx event data and driver-captured evidence for FNOL processing.`;
