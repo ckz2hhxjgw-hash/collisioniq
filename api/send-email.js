@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     photoCount = 0,
     photos = [],
     scanPhotos = {},
-    preCollisionTrack = [], mapImageData = null
+    preCollisionTrack = []
   } = req.body;
 
   if (!to) {
@@ -107,10 +107,20 @@ export default async function handler(req, res) {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
   });
 
-  // Pre-build map section HTML (static image or fallback link)
-  const mapSectionHtml = mapImageData
-    ? `<img src="${mapImageData}" style="width:100%;border-radius:8px;display:block;" alt="Pre-Collision Track Map">`
-    : `${mapSectionHtml}`;
+  // Build static map image URL from GPS track (no large payload needed)
+  function buildStaticMapUrl(track) {
+    if (!track || track.length === 0) return null;
+    const impact = track[track.length - 1];
+    const pathPoints = track.map(p => p.lat + ',' + p.lng).join('|');
+    return 'https://staticmap.openstreetmap.de/staticmap.php?center=' + impact.lat + ',' + impact.lng
+      + '&zoom=14&size=560x260&maptype=mapnik'
+      + '&markers=' + impact.lat + ',' + impact.lng + ',red-pushpin'
+      + '&path=color:0x4C84FF|weight:4|' + pathPoints;
+  }
+  const staticMapUrl = buildStaticMapUrl(preCollisionTrack);
+  const mapSectionHtml = staticMapUrl
+    ? `<a href="https://www.google.com/maps/search/?api=1&query=${preCollisionTrack[preCollisionTrack.length-1]?.lat},${preCollisionTrack[preCollisionTrack.length-1]?.lng}" style="display:block;text-decoration:none;"><img src="${staticMapUrl}" width="560" style="width:100%;border-radius:8px;display:block;border:0;" alt="Pre-Collision Track Map"></a>`
+    : `<a href="https://www.google.com/maps/search/?api=1&query=36.154,-115.168" style="display:inline-block;background:#f1f5f9;border:1.5px solid #E5EEF2;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;color:#4C84FF;text-decoration:none;">&#x1F5FA;&#xFE0F; View Impact Location on Map &rarr;</a>`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
