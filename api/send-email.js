@@ -1,4 +1,4 @@
-import { Resend } from '@resend/node';
+import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -240,7 +240,7 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'CollisionIQ <reports@collisioniq.lytx.com>',
+      from: 'CollisionIQ <onboarding@resend.dev>',
       to: [to],
       subject: `CollisionIQ Incident Report \u2014 ${eventId}`,
       html
