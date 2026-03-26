@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     photoCount = 0,
     photos = [],
     scanPhotos = {},
-    preCollisionTrack = []
+    preCollisionTrack = [], mapImageData = null
   } = req.body;
 
   if (!to) {
@@ -106,6 +106,11 @@ export default async function handler(req, res) {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
   });
+
+  // Pre-build map section HTML (static image or fallback link)
+  const mapSectionHtml = mapImageData
+    ? `<img src="${mapImageData}" style="width:100%;border-radius:8px;display:block;" alt="Pre-Collision Track Map">`
+    : `${mapSectionHtml}`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
