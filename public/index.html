@@ -1086,6 +1086,19 @@ function renderPreCollisionMap() {
 
   // Build speed timeline
   renderSpeedTimeline();
+
+  // Auto-capture map image for email report after tiles load
+  preCollisionMapInstance.whenReady(() => {
+    setTimeout(async () => {
+      try {
+        if (typeof html2canvas !== 'undefined') {
+          const mapEl = document.getElementById('preCollisionMap');
+          const mapCanvas = await html2canvas(mapEl, { useCORS: true, logging: false, scale: 1 });
+          window._preCollisionMapImage = mapCanvas.toDataURL('image/png');
+        }
+      } catch(e) { console.warn('Map pre-capture failed:', e); }
+    }, 1500);
+  });
 }
 
 function renderSpeedTimeline() {
@@ -1304,31 +1317,8 @@ async function sendEmailReport() {
     time: pt[3], speed: pt[2], lat: pt[0], lng: pt[1]
   }));
 
-  // Capture pre-collision map as static image for email
-  let mapImageData = null;
-  try {
-    const mapEl = document.getElementById('preCollisionMap');
-    if (mapEl && typeof html2canvas !== 'undefined' && preCollisionMapInstance) {
-      const screenEl = mapEl.closest('.screen') || mapEl.parentElement;
-      const wasHidden = screenEl && window.getComputedStyle(screenEl).display === 'none';
-      if (wasHidden) {
-        screenEl.style.display = 'flex';
-        screenEl.style.visibility = 'hidden';
-        screenEl.style.position = 'absolute';
-        screenEl.style.left = '-9999px';
-      }
-      preCollisionMapInstance.invalidateSize();
-      await new Promise(r => setTimeout(r, 800));
-      const mapCanvas = await html2canvas(mapEl, { useCORS: true, logging: false, scale: 1 });
-      mapImageData = mapCanvas.toDataURL('image/png');
-      if (wasHidden) {
-        screenEl.style.display = '';
-        screenEl.style.visibility = '';
-        screenEl.style.position = '';
-        screenEl.style.left = '';
-      }
-    }
-  } catch(mapErr) { console.warn('Map capture failed:', mapErr); }
+  // Use pre-captured map image (auto-captured when summary screen rendered)
+  const mapImageData = window._preCollisionMapImage || null;
 
   try {
     const res = await fetch('/api/send-email', {
