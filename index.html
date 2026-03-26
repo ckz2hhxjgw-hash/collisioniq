@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CollisionIQ by Lytx</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Lato', sans-serif; background: #ECECEC; color: #1B2431; }
+    .screen { display: none; flex-direction: column; min-height: 100vh; padding-top: 64px; }
+    .screen.active { display: flex; }
+    .btn-primary { background: #4C84FF; color: white; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; border: none; cursor: pointer; transition: background 0.15s; letter-spacing: 0.2px; }
+    .btn-primary:active { background: #3a6fd4; }
+    .btn-secondary { background: white; color: #4C84FF; border: 2px solid #4C84FF; border-radius: 8px; padding: 14px 24px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.15s; }
+    .btn-secondary:active { background: #E5EEF2; }
+    .btn-danger { background: #dc2626; color: white; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; border: none; cursor: pointer; }
+    .btn-danger:active { background: #b91c1c; }
+    .btn-ghost { background: transparent; color: #667892; border: none; padding: 12px 24px; font-size: 14px; cursor: pointer; width: 100%; }
+    .btn-back { background: transparent; color: rgba(255,255,255,0.7); border: none; padding: 0; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .btn-back:active { color: white; }
+    .btn-scan { background: linear-gradient(135deg, #0f766e, #059669); color: white; border-radius: 8px; padding: 13px 16px; font-size: 15px; font-weight: 700; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.1px; }
+    .btn-scan:active { background: linear-gradient(135deg, #0d6560, #047857); }
+    .btn-dismiss { background: white; color: #dc2626; border: 2.5px solid #dc2626; border-radius: 8px; padding: 16px 24px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.2px; }
+    .btn-dismiss:active { background: #fef2f2; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(27,36,49,0.08); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; background: #E5EEF2; color: #4C84FF; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .badge-red { background: #fee2e2; color: #dc2626; }
+    .badge-green { background: #dcfce7; color: #16a34a; }
+    .badge-orange { background: #fff7ed; color: #c2410c; }
+    .progress-bar { height: 4px; background: #E5EEF2; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #4C84FF; border-radius: 2px; transition: width 0.4s ease; }
+    .telemetry-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E5EEF2; }
+    .telemetry-row:last-child { border-bottom: none; }
+    .photo-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 2px solid #E5EEF2; }
+    .photo-check { width: 64px; height: 64px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 2px solid #16a34a; }
+    .photo-pending { width: 64px; height: 64px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px dashed #cbd5e1; }
+    input[type="text"], input[type="tel"], select { width: 100%; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 12px 14px; font-size: 16px; outline: none; transition: border-color 0.15s; background: white; font-family: 'Lato', sans-serif; color: #1B2431; }
+    input[type="text"]:focus, input[type="tel"]:focus, select:focus { border-color: #4C84FF; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E5EEF2; border-top-color: #4C84FF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+    .ocr-spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .safety-btn { background: white; border: 2px solid #E5EEF2; border-radius: 8px; padding: 14px 20px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; text-align: left; display: flex; align-items: center; gap: 12px; color: #1B2431; }
+    .safety-btn:active { background: #E5EEF2; border-color: #4C84FF; }
+    .safety-btn.selected { background: #E5EEF2; border-color: #4C84FF; color: #4C84FF; }
+    .report-text { background: #f8fafc; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #1B2431; white-space: pre-wrap; }
+    .ocr-filled { border-color: #059669 !important; background: #f0fdf4 !important; }
+    #locationMap { height: 220px; width: 100%; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+    #preCollisionMap { height: 260px; border-radius: 10px; overflow: hidden; }
+    .leaflet-container { font-family: 'Lato', sans-serif; }
+    .map-toggle-btn { background: #f1f5f9; border: 1.5px solid #E5EEF2; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #4C84FF; cursor: pointer; width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; }
+    .map-toggle-btn:active { background: #E5EEF2; }
+    .speed-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .speed-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header style="background:#1B2431; position:fixed; top:0; left:0; right:0; z-index:100; height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <img src="https://www.lytx.com/img/logo-light.svg" alt="Lytx" style="height:28px; width:auto; display:block;" />
+    <div style="width:1px; height:28px; background:rgba(255,255,255,0.2);"></div>
+    <div style="color:white; font-weight:700; font-size:16px; letter-spacing:-0.2px;">CollisionIQ</div>
+  </div>
+  <div id="headerRight" style="display:flex; align-items:center; gap:8px;"></div>
+</header>
+
+<!-- ═══ SCREEN 1: COLLISION ALERT ═══ -->
+<div id="screen1" class="screen active">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <!-- ACTIVE COLLISION STATE -->
+    <div id="collisionActive">
+      <!-- Alert Banner -->
+      <div style="background:#dc2626; border-radius:16px; padding:20px; margin-bottom:20px; color:white; text-align:center;">
+        <div style="font-size:40px; margin-bottom:8px;">🚨</div>
+        <div style="font-size:18px; font-weight:700; margin-bottom:4px; letter-spacing:-0.2px;">Collision Detected</div>
+        <div style="font-size:13px; opacity:0.85;">Lytx video and telemetry captured</div>
+      </div>
+
+      <!-- Event Details Card -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px;">Event Details</div>
+          <span class="badge">LTX-2026-03847</span>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:14px;">📅 Date &amp; Time</div>
+          <div style="font-weight:600; font-size:14px;">Mar 24, 2026 · 2:47 PM</div>
+        </div>
+        <div class="telemetry-row" style="flex-direction:column; align-items:flex-start; gap:8px; padding-bottom:0;">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <div style="color:#667892; font-size:14px;">📍 Location</div>
+            <div style="font-weight:600; font-size:14px; text-align:right; max-width:55%;">I-15 N, Exit 42<br><span style="font-weight:400; color:#667892;">Las Vegas, NV</span></div>
+          </div>
+          <button class="map-toggle-btn" onclick="toggleLocationMap(this)" style="margin-top:8px; margin-bottom:0;">
+            <span>🗺️ Show on map</span><span id="mapToggleArrow">▼</span>
+          </button>
+          <!-- Map: hidden until toggled -->
+          <div id="locationMap" style="display:none;"></div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:14px;">🚛 Vehicle</div>
+          <div style="font-weight:600; font-size:14px; text-align:right;">Unit #4821<br><span style="font-weight:400; color:#667892;">2023 Ford F-150</span></div>
+        </div>
+      </div>
+
+      <!-- Impact Data Card -->
+      <div class="card" style="margin-bottom:24px;">
+        <div style="font-weight:700; font-size:14px; color:#4C84FF; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Impact Data</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:26px; font-weight:700; color:#c2410c;">34</div>
+            <div style="font-size:11px; color:#9a3412; font-weight:600;">MPH AT IMPACT</div>
+          </div>
+          <div style="background:#fef2f2; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:26px; font-weight:700; color:#dc2626;">8.2g</div>
+            <div style="font-size:11px; color:#991b1b; font-weight:600;">G-FORCE (SEVERE)</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="goToScreen(2)" style="margin-bottom:14px;">
+        Begin Incident Report →
+      </button>
+
+      <button class="btn-dismiss" onclick="dismissAlert()">
+        <span>✕</span> Dismiss — False Trigger
+      </button>
+    </div>
+
+    <!-- NO COLLISION STATE (shown after dismiss) -->
+    <div id="collisionDismissed" style="display:none;" class="fade-in">
+      <div style="text-align:center; padding:40px 20px;">
+        <div style="font-size:56px; margin-bottom:16px;">✅</div>
+        <div style="font-size:20px; font-weight:700; color:#1B2431; margin-bottom:8px;">No Active Collisions</div>
+        <div style="color:#667892; font-size:15px; line-height:1.5; margin-bottom:32px;">The event was dismissed. Lytx telemetry has been saved.</div>
+      </div>
+      <div class="card" style="background:#f0fdf4; border:2px solid #86efac; text-align:center; margin-bottom:16px;">
+        <div style="font-size:14px; color:#15803d; font-weight:600;">Event LTX-2026-03847 — Dismissed</div>
+        <div style="font-size:12px; color:#16a34a; margin-top:4px;">Recorded as false trigger · Telemetry retained</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; margin-bottom:12px;">Was there an incident Lytx didn't detect?</div>
+        <div style="color:#667892; font-size:14px; margin-bottom:16px; line-height:1.5;">You can manually start an incident report for any collision or near-miss.</div>
+        <button class="btn-secondary" onclick="startManualReport()" style="margin-bottom:10px;">+ Report Incident Manually</button>
+        <button class="btn-ghost" style="font-size:13px;">View Incident History</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: SAFETY CHECK ═══ -->
+<div id="screen2" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <!-- Back nav -->
+    <div style="margin-bottom:20px;">
+      <button class="btn-back" onclick="goToScreen(1)" style="color:#667892; font-size:14px; display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; font-weight:600;">
+        ← Back
+      </button>
+    </div>
+
+    <div style="text-align:center; margin-bottom:24px;">
+      <div style="font-size:48px; margin-bottom:12px;">🛡️</div>
+      <div style="font-size:18px; font-weight:700; color:#4C84FF; margin-bottom:8px;">Safety First</div>
+      <div style="color:#667892; font-size:15px; line-height:1.5;">Before documenting the scene, let's make sure everyone is safe.</div>
+    </div>
+
+    <!-- Q1 -->
+    <div class="card" id="safetyQ1">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Are you physically okay?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(1, 'yes', this)">
+          <span>✅</span> Yes, I'm okay
+        </button>
+        <button class="safety-btn" onclick="answerSafety(1, 'no', this)">
+          <span>🆘</span> I need medical attention
+        </button>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="card" id="safetyQ2" style="display:none; opacity:0; transition:opacity 0.3s;">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Are any other parties injured?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(2, 'no', this)">
+          <span>✅</span> Everyone appears okay
+        </button>
+        <button class="safety-btn" onclick="answerSafety(2, 'yes', this)">
+          <span>🆘</span> Someone may be injured
+        </button>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="card" id="safetyQ3" style="display:none; opacity:0; transition:opacity 0.3s;">
+      <div style="font-weight:600; font-size:16px; margin-bottom:14px; color:#1B2431;">Is your vehicle in a safe position?</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="safety-btn" onclick="answerSafety(3, 'safe', this)">
+          <span>✅</span> Yes, safely stopped
+        </button>
+        <button class="safety-btn" onclick="answerSafety(3, 'unsafe', this)">
+          <span>⚠️</span> Vehicle is blocking traffic
+        </button>
+      </div>
+    </div>
+
+    <!-- Q4: Vehicle now safe? (shown only if "blocking traffic" selected) -->
+    <div class="card" id="safetyQ4" style="display:none; opacity:0; transition:opacity 0.3s; border:2px solid #fbbf24; background:#fffbeb;">
+      <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:14px;">
+        <span style="font-size:24px;">⚠️</span>
+        <div>
+          <div style="font-weight:700; font-size:16px; color:#92400e; margin-bottom:4px;">Move to safety first</div>
+          <div style="font-size:14px; color:#78350f; line-height:1.5;">If safe to do so, move your vehicle to the shoulder. Turn on hazard lights. Confirm below when you're out of traffic.</div>
+        </div>
+      </div>
+      <button class="btn-primary" style="background:#15803d;" onclick="confirmVehicleSafe()">
+        ✅ Vehicle is now safe / out of traffic
+      </button>
+    </div>
+
+    <!-- Emergency message -->
+    <div id="emergencyMsg" style="display:none;" class="card">
+      <div style="background:#fef2f2; border:2px solid #fca5a5; border-radius:12px; padding:16px; text-align:center;">
+        <div style="font-size:32px; margin-bottom:8px;">🚑</div>
+        <div style="font-weight:700; color:#dc2626; font-size:16px; margin-bottom:6px;">Call 911 First</div>
+        <div style="color:#667892; font-size:14px; margin-bottom:16px;">Ensure everyone's safety before documenting. Return to CollisionIQ when you're safe.</div>
+        <button class="btn-danger" onclick="callEmergency()" style="margin-bottom:10px;">📞 Call 911</button>
+        <button class="btn-ghost" onclick="goToScreen(3)" style="font-size:14px; color:#9ca3af;">Continue to documentation anyway</button>
+      </div>
+    </div>
+
+    <!-- Proceed -->
+    <div id="safetyProceed" style="display:none;">
+      <div class="card" style="background:#f0fdf4; border:2px solid #86efac; text-align:center; padding:16px; margin-bottom:16px;">
+        <div style="font-size:28px; margin-bottom:6px;">✅</div>
+        <div style="font-weight:600; color:#15803d; font-size:15px;">Good. Let's document the scene.</div>
+      </div>
+      <button class="btn-primary" onclick="goToScreen(3)">Capture Evidence →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: EVIDENCE COLLECTION ═══ -->
+<div id="screen3" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1; display:flex; flex-direction:column;">
+
+    <!-- Back nav -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button style="background:none; border:none; padding:0; cursor:pointer; font-size:14px; font-weight:600; color:#667892; display:flex; align-items:center; gap:6px;" onclick="goToScreen(2)">← Back</button>
+    </div>
+
+    <!-- Progress -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-size:15px; font-weight:600; color:#4C84FF;">Evidence Collection</div>
+        <div style="font-size:13px; color:#667892;"><span id="photoStepNum">1</span> of 7 photos</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="photoProgress" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Current Step Card -->
+    <div class="card" style="flex:1; display:flex; flex-direction:column; margin-bottom:16px;">
+      <div style="margin-bottom:16px;">
+        <span class="badge badge-orange" id="photoBadge">Photo 1 of 7</span>
+        <div style="font-size:18px; font-weight:700; color:#1B2431; margin-top:10px;" id="photoStepLabel">Your vehicle — driver side</div>
+      </div>
+
+      <!-- AI Hint -->
+      <div style="background:#E5EEF2; border-radius:8px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+        <span style="font-size:18px; flex-shrink:0;">💡</span>
+        <div style="font-size:14px; color:#4C84FF; line-height:1.5; font-weight:400;" id="photoHint">Step back far enough to capture the full driver side of your vehicle.</div>
+      </div>
+
+      <!-- Photo capture area -->
+      <div id="photoCaptureArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;">
+        <div id="photoPreview" style="width:200px; height:150px; background:#f1f5f9; border-radius:12px; display:flex; align-items:center; justify-content:center; border:2px dashed #cbd5e1; overflow:hidden;">
+          <div style="text-align:center; color:#94a3b8;">
+            <div style="font-size:36px; margin-bottom:4px;">📷</div>
+            <div style="font-size:12px;">No photo yet</div>
+          </div>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoCapture(event)">
+        <button class="btn-primary" onclick="document.getElementById('photoInput').click()" style="max-width:220px;">📷 Take Photo</button>
+        <button class="btn-ghost" style="font-size:13px; color:#94a3b8;" onclick="useMockPhoto()">Use sample photo (demo)</button>
+      </div>
+    </div>
+
+    <!-- Captured Photos Strip -->
+    <div id="photoStrip" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; min-height:72px;"></div>
+
+    <!-- Navigation -->
+    <div style="display:flex; gap:10px;">
+      <button id="skipBtn" class="btn-ghost" style="width:auto; padding:14px 20px;" onclick="skipPhoto()">Skip</button>
+      <button class="btn-primary" id="photoNextBtn" style="opacity:0.4; pointer-events:none;" onclick="nextPhotoStep()">Next →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: OTHER PARTY INFO ═══ -->
+<div id="screen4" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <!-- Back nav -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button style="background:none; border:none; padding:0; cursor:pointer; font-size:14px; font-weight:600; color:#667892; display:flex; align-items:center; gap:6px;" onclick="goToScreen(3)">← Back</button>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:18px; font-weight:700; color:#4C84FF; margin-bottom:6px;">Other Party Details</div>
+      <div style="color:#667892; font-size:14px;">Capture as much as you can. Tap scan buttons to auto-fill from photos.</div>
+    </div>
+
+    <!-- Other Driver -->
+    <div class="card">
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Driver</div>
+
+      <!-- OCR Scan DL button -->
+      <button class="btn-scan" id="scanDLBtn" onclick="scanOCR('dl')" style="margin-bottom:8px;">
+        <span style="font-size:20px;">🪪</span> Scan Driver's License
+      </button>
+      <div id="dlPhotoPreview" style="display:none; margin-bottom:10px;"></div>
+      <input type="file" id="ocrDLInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('dl', event)">
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opName" placeholder="Full name" />
+        <input type="text" id="opLicense" placeholder="Driver's license number" />
+        <input type="text" id="opLicenseState" placeholder="License state (e.g. NV)" />
+        <input type="tel" id="opPhone" placeholder="Phone number" />
+      </div>
+    </div>
+
+    <!-- Vehicle -->
+    <div class="card">
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Their Vehicle</div>
+
+      <!-- OCR Scan Plate button -->
+      <button class="btn-scan" id="scanPlateBtn" onclick="scanOCR('plate')" style="margin-bottom:8px;">
+        <span style="font-size:20px;">🚗</span> Scan License Plate
+      </button>
+      <div id="platePhotoPreview" style="display:none; margin-bottom:10px;"></div>
+      <input type="file" id="ocrPlateInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('plate', event)">
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opPlate" placeholder="License plate number" />
+        <input type="text" id="opMake" placeholder="Make and model (e.g. Toyota Camry)" />
+        <input type="text" id="opColor" placeholder="Color" />
+      </div>
+    </div>
+
+    <!-- Insurance -->
+    <div class="card">
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Their Insurance</div>
+
+      <!-- OCR Scan Insurance Card button -->
+      <button class="btn-scan" id="scanInsBtn" onclick="scanOCR('insurance')" style="margin-bottom:8px;">
+        <span style="font-size:20px;">📋</span> Scan Insurance Card
+      </button>
+      <div id="insPhotoPreview" style="display:none; margin-bottom:10px;"></div>
+      <input type="file" id="ocrInsInput" accept="image/*" capture="environment" style="display:none;" onchange="processOCR('insurance', event)">
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="opInsurer" placeholder="Insurance company" />
+        <input type="text" id="opPolicy" placeholder="Policy number" />
+        <input type="tel" id="opInsurerPhone" placeholder="Insurance phone number" />
+      </div>
+    </div>
+
+    <!-- Police Report -->
+    <div class="card" style="margin-bottom:24px;">
+      <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;">Police Report (if applicable)</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="policeReport" placeholder="Report number" />
+        <input type="text" id="policeBadge" placeholder="Officer badge number" />
+        <input type="tel" id="policePhone" placeholder="Police department phone" />
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="goToScreen(5)" style="margin-bottom:12px;">Generate FNOL Report →</button>
+    <button class="btn-ghost" onclick="goToScreen(5)">Skip — Generate Report Now</button>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 5: FNOL REPORT ═══ -->
+<div id="screen5" class="screen">
+  <div class="fade-in" style="padding:20px; flex:1;">
+
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+        <div style="font-size:18px; font-weight:700; color:#4C84FF;">Incident Report</div>
+        <span class="badge">LTX-2026-03847</span>
+      </div>
+      <div style="color:#667892; font-size:13px;" id="reportTimestamp"></div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="reportLoading" class="card" style="text-align:center; padding:40px;">
+      <div class="spinner" style="margin-bottom:16px;"></div>
+      <div style="font-weight:600; color:#4C84FF; font-size:16px; margin-bottom:6px;">Generating your report…</div>
+      <div style="color:#667892; font-size:14px;">CollisionIQ AI is analyzing your evidence</div>
+    </div>
+
+    <!-- Report Content -->
+    <div id="reportContent" style="display:none;">
+
+      <!-- Narrative -->
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">AI-Generated Narrative</div>
+        <div class="report-text" id="reportNarrative"></div>
+      </div>
+
+      <!-- Event Summary -->
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Event Summary</div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:13px;">Date &amp; Time</div>
+          <div style="font-size:13px; font-weight:600;">Mar 24, 2026 · 2:47 PM</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:13px;">Location</div>
+          <div style="font-size:13px; font-weight:600;">I-15 N, Exit 42, Las Vegas NV</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:13px;">Vehicle</div>
+          <div style="font-size:13px; font-weight:600;">Unit #4821 — 2023 Ford F-150</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:13px;">Speed at Impact</div>
+          <div style="font-size:13px; font-weight:600; color:#c2410c;">34 mph</div>
+        </div>
+        <div class="telemetry-row">
+          <div style="color:#667892; font-size:13px;">G-Force</div>
+          <div style="font-size:13px; font-weight:600; color:#dc2626;">8.2g (Severe)</div>
+        </div>
+      </div>
+
+      <!-- Pre-Collision Track (collapsible) -->
+      <div class="card" style="margin-bottom:12px; padding:16px;">
+        <button class="map-toggle-btn" onclick="togglePreCollisionMap(this)" style="background:none; border:none; padding:0; width:100%; text-align:left; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">🗺️</span>
+            <div>
+              <div style="font-weight:700; color:#4C84FF; font-size:14px;">Pre-Collision Track</div>
+              <div style="font-size:12px; color:#667892;">10 min leading to event · Speed · Weather · Traffic</div>
+            </div>
+          </div>
+          <span id="preMapArrow" style="color:#4C84FF; font-size:16px;">▼</span>
+        </button>
+
+        <div id="preCollisionSection" style="display:none; margin-top:14px;">
+          <!-- Conditions row -->
+          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <span class="badge" style="background:#e0f2fe; color:#0369a1;">☀️ Clear · 72°F</span>
+            <span class="badge" style="background:#f0fdf4; color:#15803d;">🛣️ Dry roads</span>
+            <span class="badge badge-orange">🚦 Moderate traffic</span>
+            <span class="badge" style="background:#f3e8ff; color:#7e22ce;">📡 Lytx telemetry</span>
+          </div>
+          <!-- Map -->
+          <div id="preCollisionMap"></div>
+          <!-- Speed legend -->
+          <div class="speed-legend" style="margin-top:12px;">
+            <div style="font-size:12px; color:#667892; font-weight:700; margin-bottom:2px; width:100%;">SPEED ALONG ROUTE</div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <span><span class="speed-dot" style="background:#16a34a;"></span><span style="font-size:12px; color:#667892;">≤55 mph</span></span>
+              <span><span class="speed-dot" style="background:#f59e0b;"></span><span style="font-size:12px; color:#667892;">56–65 mph</span></span>
+              <span><span class="speed-dot" style="background:#ea580c;"></span><span style="font-size:12px; color:#667892;">66–75 mph</span></span>
+              <span><span class="speed-dot" style="background:#dc2626;"></span><span style="font-size:12px; color:#667892;">Impact</span></span>
+            </div>
+          </div>
+          <!-- Timeline -->
+          <div style="margin-top:14px; background:#f8fafc; border-radius:8px; padding:12px;">
+            <div style="font-size:12px; font-weight:700; color:#667892; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Speed Timeline</div>
+            <div id="speedTimeline"></div>
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:10px; line-height:1.5;">ⓘ Weather and traffic data are simulated for this demo. Production integration pulls live data from Lytx telematics, NOAA, and real-time traffic APIs.</div>
+        </div>
+      </div>
+
+      <!-- Evidence Summary -->
+      <div class="card" style="margin-bottom:12px;" id="evidenceSummaryCard"></div>
+
+      <!-- Other Party Summary -->
+      <div class="card" style="margin-bottom:20px;" id="otherPartySummaryCard"></div>
+
+      <!-- Actions -->
+      <button class="btn-primary" onclick="submitReport()" style="margin-bottom:10px;">✅ Submit to Fleet Manager</button>
+
+      <!-- Email Report -->
+      <div id="emailReportCard" style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:10px;">
+        <div style="font-size:13px; font-weight:700; color:#1B2431; margin-bottom:10px;">📧 Email Report</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="emailReportInput" type="email" placeholder="Enter email address…"
+            style="flex:1; background:white; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:14px; color:#1B2431; outline:none;"
+            onfocus="this.style.borderColor='#4C84FF'" onblur="this.style.borderColor='#e2e8f0'"
+            onkeydown="if(event.key==='Enter') sendEmailReport()" />
+          <button onclick="sendEmailReport()"
+            style="background:linear-gradient(135deg,#4C84FF,#7C4DFF); color:white; border:none; border-radius:10px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+            Send ➤
+          </button>
+        </div>
+        <div id="emailReportStatus" style="display:none; margin-top:8px; font-size:12px; font-weight:600;"></div>
+      </div>
+
+      <button class="btn-ghost" style="color:#667892; font-size:14px;" onclick="startOver()">Start New Report</button>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ OCR PROCESSING OVERLAY ═══ -->
+<div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(27,36,49,0.85); z-index:200; display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+  <div class="spinner" style="border-color:rgba(255,255,255,0.2); border-top-color:#4C84FF; width:52px; height:52px;"></div>
+  <div style="color:white; font-weight:700; font-size:16px;" id="ocrStatusText">Scanning…</div>
+  <div style="color:rgba(255,255,255,0.6); font-size:13px;">CollisionIQ OCR is reading the document</div>
+</div>
+
+<!-- ═══ SUCCESS TOAST ═══ -->
+<div id="toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1B2431; color:white; padding:12px 24px; border-radius:50px; font-size:14px; font-weight:700; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.25); white-space:nowrap; letter-spacing:0.2px;"></div>
+
+<script>
+// ═══════════════════════════
+//  APP STATE
+// ═══════════════════════════
+const state = {
+  currentScreen: 1,
+  safetyQ1: null,
+  safetyQ2: null,
+  safetyQ3: null,
+  photos: [],
+  currentPhotoStep: 0,
+  reportGenerated: false,
+  locationMapShown: false,
+  preMapShown: false,
+  scanPhotos: { dl: null, plate: null, insurance: null }
+};
+
+const EVIDENCE_STEPS = [
+  { label: 'Your vehicle — driver side', hint: 'Step back far enough to capture the full driver side of your vehicle. Include the license plate if possible.' },
+  { label: 'Your vehicle — damage close-up', hint: 'Move in close to document any dents, scratches, or broken parts on your vehicle clearly.' },
+  { label: 'Your vehicle — license plate', hint: 'Photograph your license plate straight-on so it is fully readable.' },
+  { label: 'Other vehicle — front', hint: 'Capture the full front of the other vehicle. Try to get their license plate in the same shot.' },
+  { label: 'Other vehicle — damage', hint: 'Document any visible damage on the other vehicle with a clear, close-up shot.' },
+  { label: 'Overall scene', hint: 'Step back and photograph the full accident scene, including both vehicles and road markings.' },
+  { label: 'Road conditions / signage', hint: 'Photograph any relevant signs, signals, traffic lights, or road conditions that may have contributed.' }
+];
+
+// Pre-collision GPS track (I-15 N, approaching Exit 42, Las Vegas)
+// Coordinates: [lat, lng, speed_mph, time_label]
+const PRE_COLLISION_TRACK = [
+  [36.068, -115.183, 62, '-10 min'],
+  [36.082, -115.181, 65, '-8 min'],
+  [36.096, -115.179, 68, '-6 min'],
+  [36.110, -115.177, 67, '-4 min'],
+  [36.124, -115.175, 63, '-2 min'],
+  [36.138, -115.173, 58, '-1 min'],
+  [36.148, -115.171, 45, '-30 sec'],
+  [36.154, -115.168, 34, 'Impact']
+];
+
+// ═══════════════════════════
+//  NAVIGATION
+// ═══════════════════════════
+function goToScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen${n}`).classList.add('active');
+  state.currentScreen = n;
+  window.scrollTo(0, 0);
+  updateHeader(n);
+  if (n === 3) initPhotoStep();
+  if (n === 5) initReport();
+}
+
+function updateHeader(n) {
+  const right = document.getElementById('headerRight');
+  if (n === 1) {
+    right.innerHTML = '<span style="background:#dc2626; color:white; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">LIVE EVENT</span>';
+  } else if (n < 5) {
+    right.innerHTML = `<span style="color:rgba(255,255,255,0.6); font-size:13px; font-weight:700; letter-spacing:0.3px;">Step ${n-1} of 4</span>`;
+  } else {
+    right.innerHTML = '<span style="background:#dcfce7; color:#15803d; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">COMPLETE</span>';
+  }
+}
+
+// ═══════════════════════════
+//  SCREEN 1: ALERT & MAP
+// ═══════════════════════════
+let locationMapInstance = null;
+function toggleLocationMap(btn) {
+  const mapEl = document.getElementById('locationMap');
+  const arrow = document.getElementById('mapToggleArrow');
+  if (!state.locationMapShown) {
+    mapEl.style.display = 'block';
+    arrow.textContent = '▲';
+    btn.querySelector('span:first-child').textContent = '🗺️ Hide map';
+    state.locationMapShown = true;
+    if (!locationMapInstance) {
+      setTimeout(() => {
+        // Center on mid-route
+        locationMapInstance = L.map('locationMap', { zoomControl: false, attributionControl: false }).setView([36.111, -115.176], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.85 }).addTo(locationMapInstance);
+
+        // Draw speed-colored route segments (same as pre-collision track)
+        const coords = PRE_COLLISION_TRACK.map(p => [p[0], p[1]]);
+        const colorForSpeed = (s) => {
+          if (s >= 66) return '#ea580c';
+          if (s >= 56) return '#f59e0b';
+          if (s <= 40) return '#dc2626';
+          return '#16a34a';
+        };
+        for (let i = 0; i < coords.length - 1; i++) {
+          const speed = PRE_COLLISION_TRACK[i][2];
+          L.polyline([coords[i], coords[i+1]], { color: colorForSpeed(speed), weight: 6, opacity: 0.9 }).addTo(locationMapInstance);
+        }
+
+        // Start dot
+        L.circleMarker(coords[0], { radius: 7, fillColor: '#16a34a', color: 'white', weight: 2, fillOpacity: 1 })
+          .addTo(locationMapInstance)
+          .bindPopup('Start of route (T-10 min)');
+
+        // Impact marker
+        const impactIcon = L.divIcon({
+          html: '<div style="background:#dc2626;color:white;font-size:10px;font-weight:700;padding:3px 7px;border-radius:12px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);">💥 Impact</div>',
+          iconAnchor: [32, 10], className: ''
+        });
+        L.marker([36.154, -115.168], { icon: impactIcon })
+          .addTo(locationMapInstance)
+          .bindPopup('<b>Collision — I-15 N Exit 42</b><br>Mar 24, 2026 · 2:47 PM<br>34 mph · 8.2g');
+
+        locationMapInstance.invalidateSize();
+        // Zoom to collision location
+        locationMapInstance.setView([36.154, -115.168], 14);
+      }, 100);
+    } else {
+      locationMapInstance.invalidateSize();
+    }
+  } else {
+    mapEl.style.display = 'none';
+    arrow.textContent = '▼';
+    btn.querySelector('span:first-child').textContent = '🗺️ Show on map';
+    state.locationMapShown = false;
+  }
+}
+
+function dismissAlert() {
+  document.getElementById('collisionActive').style.display = 'none';
+  document.getElementById('collisionDismissed').style.display = 'block';
+  document.getElementById('headerRight').innerHTML = '<span style="background:#e2e8f0; color:#475569; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">DISMISSED</span>';
+}
+
+function startManualReport() {
+  document.getElementById('collisionActive').style.display = 'block';
+  document.getElementById('collisionDismissed').style.display = 'none';
+  document.getElementById('headerRight').innerHTML = '<span style="background:#dc2626; color:white; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;">LIVE EVENT</span>';
+  showToast('Manual incident report started');
+}
+
+// ═══════════════════════════
+//  SCREEN 2: SAFETY
+// ═══════════════════════════
+function answerSafety(q, answer, btn) {
+  const card = document.getElementById(`safetyQ${q}`);
+  card.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state[`safetyQ${q}`] = answer;
+
+  if ((q === 1 && answer === 'no') || (q === 2 && answer === 'yes')) {
+    setTimeout(() => {
+      document.getElementById('emergencyMsg').style.display = 'block';
+    }, 300);
+    return;
+  }
+
+  setTimeout(() => {
+    if (q === 1) {
+      const q2 = document.getElementById('safetyQ2');
+      q2.style.display = 'block';
+      setTimeout(() => { q2.style.opacity = '1'; }, 50);
+    } else if (q === 2) {
+      const q3 = document.getElementById('safetyQ3');
+      q3.style.display = 'block';
+      setTimeout(() => { q3.style.opacity = '1'; }, 50);
+    } else if (q === 3 && answer === 'safe') {
+      document.getElementById('safetyProceed').style.display = 'block';
+    } else if (q === 3 && answer === 'unsafe') {
+      // Show mandatory vehicle-safe confirmation step
+      const q4 = document.getElementById('safetyQ4');
+      q4.style.display = 'block';
+      setTimeout(() => { q4.style.opacity = '1'; }, 50);
+      showToast('⚠️ Move vehicle to shoulder if safe to do so');
+    }
+  }, 300);
+}
+
+function confirmVehicleSafe() {
+  document.getElementById('safetyQ4').style.borderColor = '#86efac';
+  document.getElementById('safetyQ4').style.background = '#f0fdf4';
+  document.getElementById('safetyQ4').querySelector('button').textContent = '✅ Confirmed — vehicle is safe';
+  document.getElementById('safetyQ4').querySelector('button').style.background = '#15803d';
+  setTimeout(() => {
+    document.getElementById('safetyProceed').style.display = 'block';
+  }, 300);
+}
+
+function callEmergency() {
+  window.location.href = 'tel:911';
+}
+
+// ═══════════════════════════
+//  SCREEN 3: EVIDENCE
+// ═══════════════════════════
+function initPhotoStep() {
+  state.currentPhotoStep = 0;
+  // Don't reset photos here — preserves captures when user navigates back from screen 4.
+  // Photos are only wiped in startOver().
+  renderPhotoStep();
+  renderPhotoStrip();
+}
+
+function renderPhotoStep() {
+  const step = EVIDENCE_STEPS[state.currentPhotoStep];
+  document.getElementById('photoStepNum').textContent = state.currentPhotoStep + 1;
+  document.getElementById('photoBadge').textContent = `Photo ${state.currentPhotoStep + 1} of 7`;
+  document.getElementById('photoStepLabel').textContent = step.label;
+  document.getElementById('photoHint').textContent = step.hint;
+
+  const pct = (state.currentPhotoStep / 7) * 100;
+  document.getElementById('photoProgress').style.width = pct + '%';
+
+  document.getElementById('photoPreview').innerHTML = `
+    <div style="text-align:center; color:#94a3b8;">
+      <div style="font-size:36px; margin-bottom:4px;">📷</div>
+      <div style="font-size:12px;">No photo yet</div>
+    </div>`;
+
+  if (state.photos[state.currentPhotoStep]) {
+    showPhotoPreview(state.photos[state.currentPhotoStep]);
+    enableNext();
+  } else {
+    document.getElementById('photoNextBtn').style.opacity = '0.4';
+    document.getElementById('photoNextBtn').style.pointerEvents = 'none';
+  }
+
+  document.getElementById('photoInput').value = '';
+  updateSkipBtn();
+}
+
+function updateSkipBtn() {
+  const skipBtn = document.getElementById('skipBtn');
+  skipBtn.textContent = 'Skip';
+}
+
+function handlePhotoCapture(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  state.photos[state.currentPhotoStep] = { url, name: `Photo ${state.currentPhotoStep + 1}`, mock: false };
+  showPhotoPreview(url);
+  enableNext();
+  renderPhotoStrip();
+  updateSkipBtn();
+}
+
+function useMockPhoto() {
+  const mockColors = ['#dbeafe', '#dcfce7', '#fef9c3', '#fce7f3', '#ede9fe', '#ffedd5', '#f0fdf4'];
+  const c = mockColors[state.currentPhotoStep] || '#f1f5f9';
+  const mockUrl = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150'><rect width='200' height='150' fill='${encodeURIComponent(c)}'/><text x='100' y='75' font-family='sans-serif' font-size='13' fill='%23475569' text-anchor='middle' dominant-baseline='middle'>📷 Photo ${state.currentPhotoStep + 1}</text></svg>`;
+  state.photos[state.currentPhotoStep] = { url: mockUrl, name: `Photo ${state.currentPhotoStep + 1}`, mock: true };
+  showPhotoPreview(mockUrl);
+  enableNext();
+  renderPhotoStrip();
+  showToast('Sample photo added ✓');
+  updateSkipBtn();
+}
+
+function showPhotoPreview(urlOrObj) {
+  const url = typeof urlOrObj === 'string' ? urlOrObj : urlOrObj.url;
+  document.getElementById('photoPreview').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+}
+
+function enableNext() {
+  const btn = document.getElementById('photoNextBtn');
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+}
+
+function nextPhotoStep() {
+  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+    state.currentPhotoStep++;
+    renderPhotoStep();
+    renderPhotoStrip();
+  } else {
+    goToScreen(4);
+  }
+}
+
+function skipPhoto() {
+  state.photos[state.currentPhotoStep] = null;
+  if (state.currentPhotoStep < EVIDENCE_STEPS.length - 1) {
+    state.currentPhotoStep++;
+    renderPhotoStep();
+    renderPhotoStrip();
+  } else {
+    goToScreen(4);
+  }
+}
+
+function renderPhotoStrip() {
+  const strip = document.getElementById('photoStrip');
+  strip.innerHTML = '';
+  EVIDENCE_STEPS.forEach((step, i) => {
+    const p = state.photos[i];
+    const div = document.createElement('div');
+    div.style.flexShrink = '0';
+    div.style.position = 'relative';
+    if (p) {
+      div.innerHTML = `<img src="${p.url}" class="photo-thumb" title="${step.label}">
+        <div style="position:absolute;top:-4px;right:-4px;background:#16a34a;color:white;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;">✓</div>`;
+    } else if (i === state.currentPhotoStep) {
+      div.innerHTML = `<div class="photo-pending pulse" title="${step.label}"><span style="font-size:18px;">📷</span></div>`;
+    } else {
+      div.innerHTML = `<div class="photo-pending" title="${step.label}" style="opacity:0.4;"><span style="font-size:18px;">○</span></div>`;
+    }
+    strip.appendChild(div);
+  });
+}
+
+// ═══════════════════════════
+//  SCREEN 4: OCR SCANNING
+// ═══════════════════════════
+function scanOCR(type) {
+  const inputMap = { dl: 'ocrDLInput', plate: 'ocrPlateInput', insurance: 'ocrInsInput' };
+  document.getElementById(inputMap[type]).click();
+}
+
+// Preprocess image for OCR: fix EXIF orientation via createImageBitmap,
+// resize to optimal dimensions, return high-quality JPEG base64
+async function preprocessImageForOCR(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch (e) {
+    bitmap = await createImageBitmap(file);
+  }
+  let w = bitmap.width, h = bitmap.height;
+  const maxDim = 1600;
+  // Scale down if too large
+  if (w > maxDim || h > maxDim) {
+    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+    else { w = Math.round(w * maxDim / h); h = maxDim; }
+  }
+  // Scale up if too small (minimum 800px on long side for readable text)
+  const minDim = 800;
+  if (Math.max(w, h) < minDim) {
+    const scale = minDim / Math.max(w, h);
+    w = Math.round(w * scale); h = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.93).split(',')[1];
+}
+
+async function processOCR(type, event) {
+  if (!event.target.files[0]) return;
+  const file = event.target.files[0];
+
+  // Store the photo URL for thumbnail display
+  const photoURL = URL.createObjectURL(file);
+  state.scanPhotos[type === 'insurance' ? 'insurance' : type] = photoURL;
+
+  // Show OCR processing overlay
+  const overlay = document.getElementById('ocrOverlay');
+  overlay.style.display = 'flex';
+  const statusEl = document.getElementById('ocrStatusText');
+
+  const messages = ['Scanning document…', 'Reading text…', 'Extracting fields…', 'Verifying data…'];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    if (msgIdx < messages.length) { statusEl.textContent = messages[msgIdx++]; }
+  }, 600);
+
+  try {
+    // Preprocess: fix orientation + resize for optimal OCR
+    const base64 = await preprocessImageForOCR(file);
+
+    // Build prompt per document type — specific and robust
+    const prompts = {
+      dl: `This is a photo of a US driver's license. Carefully read ALL visible text and extract:
+1. Full legal name (usually largest text, may be "LAST, FIRST MIDDLE" or "FIRST MIDDLE LAST")
+2. License/ID number (alphanumeric, often labeled "DL", "ID", "LIC" or "LICENSE NO")
+3. State abbreviation (2 letters, e.g. NV, CA, TX)
+Reply ONLY with valid JSON: {"name":"...","license":"...","state":"..."}
+If a field is not clearly readable, use an empty string. Do not guess.`,
+      plate: `This is a photo of a vehicle license plate. Read the alphanumeric characters on the plate exactly as shown, ignoring any state name or slogan text below the plate number.
+Reply ONLY with valid JSON: {"plate":"..."}
+If not readable, use an empty string.`,
+      insurance: `This is a photo of an auto insurance card. Extract:
+1. Insurance company name (e.g. "State Farm", "Geico", "Progressive")
+2. Policy number (labeled "Policy No.", "Policy #", or similar)
+3. Customer service phone number
+Reply ONLY with valid JSON: {"insurer":"...","policy":"...","phone":"..."}
+If a field is not clearly visible, use an empty string.`
+    };
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: prompts[type] }
+          ]
+        }]
+      })
+    });
+
+    clearInterval(msgInterval);
+    overlay.style.display = 'none';
+
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    const raw = (data.content || data.choices?.[0]?.message?.content || '');
+    const text = typeof raw === 'string' ? raw : (raw[0]?.text || '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    const parsed = JSON.parse(jsonMatch[0]);
+    fillOCRData(type, parsed, photoURL);
+  } catch (err) {
+    clearInterval(msgInterval);
+    overlay.style.display = 'none';
+    console.warn('OCR error:', err);
+    showScanPhotoPreview(type, photoURL, false);
+    showToast('⚠️ Could not read document — please fill in manually');
+  }
+  // Reset input so same file can be re-scanned
+  event.target.value = '';
+}
+
+function fillOCRData(type, data, photoURL) {
+  if (type === 'dl') {
+    const filled = [];
+    if (data.name)    { setFieldOCR('opName', data.name);              filled.push('name'); }
+    if (data.license) { setFieldOCR('opLicense', data.license);        filled.push('license'); }
+    if (data.state)   { setFieldOCR('opLicenseState', data.state);     filled.push('state'); }
+    showToast(`✓ Driver's license scanned — ${filled.length} field${filled.length !== 1 ? 's' : ''} filled`);
+    document.getElementById('scanDLBtn').innerHTML = '<span style="font-size:20px;">✅</span> License Scanned';
+    document.getElementById('scanDLBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
+  } else if (type === 'plate') {
+    if (data.plate) {
+      setFieldOCR('opPlate', data.plate);
+      showToast('✓ License plate scanned: ' + data.plate);
+      document.getElementById('scanPlateBtn').innerHTML = `<span style="font-size:20px;">✅</span> Plate Scanned: ${data.plate}`;
+    } else {
+      showToast('⚠️ Plate not readable — please fill in manually');
+      document.getElementById('scanPlateBtn').innerHTML = '<span style="font-size:20px;">⚠️</span> Plate unclear';
+    }
+    document.getElementById('scanPlateBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
+  } else if (type === 'insurance') {
+    const filled = [];
+    if (data.insurer) { setFieldOCR('opInsurer', data.insurer);        filled.push('insurer'); }
+    if (data.policy)  { setFieldOCR('opPolicy', data.policy);          filled.push('policy'); }
+    if (data.phone)   { setFieldOCR('opInsurerPhone', data.phone);     filled.push('phone'); }
+    showToast(`✓ Insurance card scanned — ${filled.length} field${filled.length !== 1 ? 's' : ''} filled`);
+    document.getElementById('scanInsBtn').innerHTML = '<span style="font-size:20px;">✅</span> Insurance Scanned';
+    document.getElementById('scanInsBtn').style.background = 'linear-gradient(135deg,#15803d,#059669)';
+  }
+  if (photoURL) showScanPhotoPreview(type, photoURL, true);
+}
+
+function showScanPhotoPreview(type, photoURL, success) {
+  const previewIds = { dl: 'dlPhotoPreview', plate: 'platePhotoPreview', insurance: 'insPhotoPreview' };
+  const labels = { dl: "Driver's License", plate: 'License Plate', insurance: 'Insurance Card' };
+  const scanBtnIds = { dl: 'scanDLBtn', plate: 'scanPlateBtn', insurance: 'scanInsBtn' };
+  const inputIds = { dl: 'ocrDLInput', plate: 'ocrPlateInput', insurance: 'ocrInsInput' };
+  const el = document.getElementById(previewIds[type]);
+  if (!el) return;
+  const statusColor = success ? '#16a34a' : '#d97706';
+  const statusText = success ? '✓ Captured' : '⚠️ Captured (fill manually)';
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 10px;">
+      <img src="${photoURL}" style="width:64px;height:50px;object-fit:cover;border-radius:6px;border:1.5px solid #e2e8f0;flex-shrink:0;" alt="${labels[type]}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#1B2431;margin-bottom:2px;">${labels[type]}</div>
+        <div style="font-size:11px;color:${statusColor};font-weight:600;">${statusText}</div>
+      </div>
+      <button onclick="document.getElementById('${inputIds[type]}').click()" style="background:#e2e8f0;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;color:#1B2431;cursor:pointer;flex-shrink:0;">Re-scan</button>
+    </div>`;
+}
+
+function setFieldOCR(id, value) {
+  if (!value) return;
+  const el = document.getElementById(id);
+  el.value = value;
+  el.classList.add('ocr-filled');
+}
+
+// ═══════════════════════════
+//  SCREEN 5: REPORT & MAP
+// ═══════════════════════════
+let preCollisionMapInstance = null;
+
+function togglePreCollisionMap(btn) {
+  const section = document.getElementById('preCollisionSection');
+  const arrow = document.getElementById('preMapArrow');
+  if (!state.preMapShown) {
+    section.style.display = 'block';
+    arrow.textContent = '▲';
+    state.preMapShown = true;
+    if (!preCollisionMapInstance) {
+      setTimeout(() => {
+        renderPreCollisionMap();
+      }, 100);
+    }
+  } else {
+    section.style.display = 'none';
+    arrow.textContent = '▼';
+    state.preMapShown = false;
+  }
+}
+
+function renderPreCollisionMap() {
+  const coords = PRE_COLLISION_TRACK.map(p => [p[0], p[1]]);
+  const center = [36.115, -115.176];
+
+  preCollisionMapInstance = L.map('preCollisionMap', { zoomControl: true, attributionControl: false }).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(preCollisionMapInstance);
+
+  // Draw colored segments by speed
+  const colorForSpeed = (s) => {
+    if (s >= 66) return '#ea580c';
+    if (s >= 56) return '#f59e0b';
+    if (s <= 40) return '#dc2626';
+    return '#16a34a';
+  };
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const speed = PRE_COLLISION_TRACK[i][2];
+    L.polyline([coords[i], coords[i+1]], {
+      color: colorForSpeed(speed),
+      weight: 6,
+      opacity: 0.85
+    }).addTo(preCollisionMapInstance);
+  }
+
+  // Time markers
+  PRE_COLLISION_TRACK.forEach((pt, i) => {
+    const isImpact = i === PRE_COLLISION_TRACK.length - 1;
+    const icon = L.divIcon({
+      html: isImpact
+        ? `<div style="background:#dc2626;color:white;font-size:10px;font-weight:700;padding:3px 6px;border-radius:12px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">💥 Impact</div>`
+        : `<div style="background:#1B2431;color:white;font-size:9px;font-weight:700;padding:2px 5px;border-radius:8px;white-space:nowrap;opacity:0.85;">${pt[2]} mph</div>`,
+      iconAnchor: isImpact ? [30, 10] : [20, 8],
+      className: ''
+    });
+    L.marker([pt[0], pt[1]], { icon }).addTo(preCollisionMapInstance);
+  });
+
+  // Start marker
+  const startIcon = L.divIcon({
+    html: `<div style="width:12px;height:12px;background:#16a34a;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [12,12], iconAnchor: [6,6], className: ''
+  });
+  L.marker(coords[0], { icon: startIcon }).addTo(preCollisionMapInstance).bindPopup('Start of track (T-10 min)');
+
+  // Build speed timeline
+  renderSpeedTimeline();
+}
+
+function renderSpeedTimeline() {
+  const el = document.getElementById('speedTimeline');
+  el.innerHTML = PRE_COLLISION_TRACK.map(pt => {
+    const pct = Math.min(100, (pt[2] / 80) * 100);
+    const isImpact = pt[3] === 'Impact';
+    const barColor = isImpact ? '#dc2626' : pt[2] >= 66 ? '#ea580c' : pt[2] >= 56 ? '#f59e0b' : '#16a34a';
+    return `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+      <div style="width:52px; font-size:11px; color:#667892; flex-shrink:0;">${pt[3]}</div>
+      <div style="flex:1; height:8px; background:#E5EEF2; border-radius:4px; overflow:hidden;">
+        <div style="height:100%; width:${pct}%; background:${barColor}; border-radius:4px;"></div>
+      </div>
+      <div style="width:44px; font-size:11px; font-weight:700; color:${isImpact ? '#dc2626' : '#1B2431'}; text-align:right;">${isImpact ? '💥 ' : ''}${pt[2]} mph</div>
+    </div>`;
+  }).join('');
+}
+
+async function initReport() {
+  document.getElementById('reportLoading').style.display = 'block';
+  document.getElementById('reportContent').style.display = 'none';
+  document.getElementById('reportTimestamp').textContent = 'Generated ' + new Date().toLocaleString();
+  state.preMapShown = false;
+  preCollisionMapInstance = null;
+  document.getElementById('preMapArrow').textContent = '▼';
+  document.getElementById('preCollisionSection').style.display = 'none';
+
+  const photoCount = state.photos.filter(p => p).length;
+  const opName = document.getElementById('opName').value || 'Unknown';
+  const opPlate = document.getElementById('opPlate').value || 'Not captured';
+  const opInsurer = document.getElementById('opInsurer').value || 'Not captured';
+  const policeReport = document.getElementById('policeReport').value || 'None';
+
+  const prompt = `Generate a professional First Notification of Loss (FNOL) incident report narrative for the following collision event. Write in third person, professional insurance/fleet management style. Be factual and concise. 3-4 sentences.
+
+Event Details:
+- Event ID: LTX-2026-03847
+- Date/Time: March 24, 2026 at 2:47 PM
+- Location: I-15 Northbound, near Exit 42, Las Vegas, NV
+- Vehicle: Unit #4821, 2023 Ford F-150 (fleet vehicle)
+- Speed at impact: 34 mph
+- G-Force: 8.2g (severe impact)
+- Photos captured: ${photoCount} of 7 evidence photos
+- Other party name: ${opName}
+- Other party license plate: ${opPlate}
+- Other party insurance: ${opInsurer}
+- Police report: ${policeReport}`;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    showReport(data.content, photoCount, opName, opPlate, opInsurer, policeReport);
+  } catch (err) {
+    const fallback = `On March 24, 2026, at approximately 2:47 PM, fleet vehicle Unit #4821 (2023 Ford F-150) operated by a Lytx-monitored driver was involved in a collision on I-15 Northbound near Exit 42 in Las Vegas, Nevada. Lytx telemetry recorded an impact speed of 34 mph with a g-force reading of 8.2g, indicating a severe impact event. ${photoCount > 0 ? `The driver captured ${photoCount} photographic evidence items at the scene using the CollisionIQ evidence collection workflow.` : ''} ${opName !== 'Unknown' ? `The other party was identified as ${opName}.` : ''} This report has been automatically generated from Lytx event data and driver-captured evidence for FNOL processing.`;
+    showReport(fallback, photoCount, opName, opPlate, opInsurer, policeReport);
+  }
+}
+
+function showReport(narrative, photoCount, opName, opPlate, opInsurer, policeReport) {
+  document.getElementById('reportLoading').style.display = 'none';
+  document.getElementById('reportContent').style.display = 'block';
+  document.getElementById('reportNarrative').textContent = narrative;
+
+  const evidenceCard = document.getElementById('evidenceSummaryCard');
+
+  // Build photo review thumbnails for any captured photos
+  const capturedPhotos = state.photos.map((p, i) => ({ photo: p, step: EVIDENCE_STEPS[i], index: i })).filter(x => x.photo);
+  let photoGalleryHtml = '';
+  if (capturedPhotos.length > 0) {
+    const thumbsHtml = capturedPhotos.map(({ photo, step }) => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="width:72px;height:56px;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+          <img src="${photo.url}" style="width:100%;height:100%;object-fit:cover;" alt="${step ? step.label : 'Photo'}">
+        </div>
+        <div style="font-size:10px;color:#64748b;text-align:center;max-width:72px;line-height:1.2;">${step ? step.label : 'Photo'}</div>
+      </div>`).join('');
+    photoGalleryHtml = `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:#667892;font-weight:600;margin-bottom:8px;">Photo Review (${capturedPhotos.length} of 7)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">${thumbsHtml}</div>
+    </div>
+    <div style="height:1px;background:#e8edf4;margin-bottom:14px;"></div>`;
+  }
+
+  evidenceCard.innerHTML = `
+    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Evidence Collected</div>
+    ${photoGalleryHtml}
+    <div class="telemetry-row">
+      <div style="color:#667892; font-size:13px;">Photos captured</div>
+      <div style="font-size:13px; font-weight:600;">${photoCount} of 7</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#667892; font-size:13px;">Lytx video clip</div>
+      <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
+    </div>
+    <div class="telemetry-row">
+      <div style="color:#667892; font-size:13px;">Telemetry data</div>
+      <div style="font-size:13px; font-weight:600; color:#16a34a;">✓ Auto-captured</div>
+    </div>`;
+
+  const opCard = document.getElementById('otherPartySummaryCard');
+  // Render each Other Party field: show value if filled, show captured photo if available, or "Not captured"
+  const renderOpField = (label, value, isEmpty, photoUrl) => {
+    if (!isEmpty) {
+      return `<div class="telemetry-row">
+        <div style="color:#667892; font-size:13px;">${label}</div>
+        <div style="font-size:13px; font-weight:600;">${value}</div>
+      </div>`;
+    } else if (photoUrl) {
+      return `<div class="telemetry-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:12px;">
+        <div style="color:#667892; font-size:13px; font-weight:600;">${label}</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="${photoUrl}" style="height:52px;width:auto;max-width:130px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <span style="font-size:11px;color:#667892;font-style:italic;">Image captured · details not extracted</span>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="telemetry-row">
+        <div style="color:#667892; font-size:13px;">${label}</div>
+        <div style="font-size:13px; font-weight:600; color:#94a3b8;">Not captured</div>
+      </div>`;
+    }
+  };
+  const nameIsEmpty   = !opName    || opName    === 'Unknown';
+  const plateIsEmpty  = !opPlate   || opPlate   === 'Not captured';
+  const insurIsEmpty  = !opInsurer || opInsurer === 'Not captured';
+  opCard.innerHTML = `
+    <div style="font-weight:700; color:#4C84FF; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other Party</div>
+    ${renderOpField('Name', opName, nameIsEmpty, state.scanPhotos.dl)}
+    ${renderOpField('License Plate', opPlate, plateIsEmpty, state.scanPhotos.plate)}
+    ${renderOpField('Insurance', opInsurer, insurIsEmpty, state.scanPhotos.insurance)}
+    <div class="telemetry-row">
+      <div style="color:#667892; font-size:13px;">Police Report</div>
+      <div style="font-size:13px; font-weight:600;">${policeReport}</div>
+    </div>`;
+}
+
+function submitReport() {
+  showToast('✅ Report submitted to fleet manager');
+  setTimeout(() => showToast('📧 Confirmation sent to dlambert@lytx.com'), 2000);
+}
+
+async function sendEmailReport() {
+  const input = document.getElementById('emailReportInput');
+  const statusEl = document.getElementById('emailReportStatus');
+  const email = (input.value || '').trim();
+
+  // Basic validation
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    input.style.borderColor = '#dc2626';
+    input.placeholder = 'Please enter a valid email…';
+    setTimeout(() => { input.style.borderColor = '#e2e8f0'; input.placeholder = 'Enter email address…'; }, 2000);
+    return;
+  }
+
+  // Show sending state
+  const btn = document.querySelector('#emailReportCard button');
+  btn.textContent = '⏳ Sending…';
+  btn.disabled = true;
+  statusEl.style.display = 'none';
+
+  // Build report payload (read from current state / DOM)
+  const narrative = document.getElementById('reportNarrative')?.textContent || '';
+  const opName    = document.getElementById('opName')?.value || 'Unknown';
+  const opPlate   = document.getElementById('opPlate')?.value || 'Not captured';
+  const opInsurer = document.getElementById('opInsurer')?.value || 'Not captured';
+  const policeRpt = document.getElementById('policeReport')?.value || 'None';
+  const photoCount = state.photos.filter(p => p).length;
+
+  // Helper: resize any blob/data URL → JPEG base64 at max dimension
+  // src may be a string URL (scan photos) or a photo object {url, name, mock} (evidence photos)
+  const toJpeg = (src, maxPx, quality) => new Promise(resolve => {
+    const url = (src && typeof src === 'object') ? src.url : src;
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width || 1, img.height || 1));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round((img.width  || maxPx) * scale);
+      canvas.height = Math.round((img.height || maxPx) * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+  // Convert evidence photos — labels match EVIDENCE_STEPS order
+  const photoLabels = ['Your vehicle — driver side','Your vehicle — damage close-up','Your vehicle — license plate','Other vehicle — front','Other vehicle — damage','Overall scene','Road conditions / signage'];
+  const photoList = (await Promise.all(
+    state.photos.map(async (src, i) => {
+      const data = await toJpeg(src, 800, 0.75);
+      return data ? { data, label: photoLabels[i] || ('Photo ' + (i + 1)) } : null;
+    })
+  )).filter(Boolean);
+
+  // Convert other-party scan photos (DL, plate, insurance card)
+  const [dlData, plateData, insData] = await Promise.all([
+    toJpeg(state.scanPhotos.dl, 1000, 0.85),
+    toJpeg(state.scanPhotos.plate, 1000, 0.85),
+    toJpeg(state.scanPhotos.insurance, 1000, 0.85)
+  ]);
+  const scanPhotos = {
+    dl:        dlData   || null,
+    plate:     plateData || null,
+    insurance: insData  || null
+  };
+
+  // Pre-collision track data for email table
+  const preCollisionTrack = PRE_COLLISION_TRACK.map(pt => ({
+    time: pt[3], speed: pt[2], lat: pt[0], lng: pt[1]
+  }));
+
+  try {
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email,
+        eventId: 'LTX-2026-03847',
+        narrative,
+        opName,
+        opPlate,
+        opInsurer,
+        policeReport: policeRpt,
+        photoCount,
+        photos: photoList,
+        scanPhotos,
+        preCollisionTrack
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      btn.textContent = '✅ Sent!';
+      btn.style.background = 'linear-gradient(135deg,#16a34a,#059669)';
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#16a34a';
+      statusEl.textContent = '✓ Report emailed to ' + email;
+      showToast('📧 Report emailed to ' + email);
+      input.value = '';
+      setTimeout(() => {
+        btn.textContent = 'Send ➤';
+        btn.disabled = false;
+        btn.style.background = 'linear-gradient(135deg,#4C84FF,#7C4DFF)';
+      }, 3000);
+    } else {
+      throw new Error(data.error || 'Send failed');
+    }
+  } catch (err) {
+    btn.textContent = 'Send ➤';
+    btn.disabled = false;
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#dc2626';
+    statusEl.textContent = '⚠ ' + (err.message || 'Could not send — check server config');
+    showToast('⚠️ Email send failed: ' + err.message);
+  }
+}
+
+function startOver() {
+  state.currentScreen = 1;
+  state.photos = [];
+  state.safetyQ1 = null;
+  state.safetyQ2 = null;
+  state.safetyQ3 = null;
+  state.preMapShown = false;
+  document.getElementById('safetyQ2').style.display = 'none';
+  document.getElementById('safetyQ3').style.display = 'none';
+  document.getElementById('safetyQ4').style.display = 'none';
+  document.getElementById('safetyProceed').style.display = 'none';
+  document.getElementById('emergencyMsg').style.display = 'none';
+  document.querySelectorAll('.safety-btn').forEach(b => b.classList.remove('selected'));
+  ['opName','opLicense','opLicenseState','opPhone','opPlate','opMake','opColor','opInsurer','opPolicy','opInsurerPhone','policeReport','policeBadge','policePhone'].forEach(id => { document.getElementById(id).value = ''; document.getElementById(id).classList.remove('ocr-filled'); });
+  // Reset scan buttons and photo previews
+  ['scanDLBtn','scanPlateBtn','scanInsBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (id === 'scanDLBtn') btn.innerHTML = '<span style="font-size:20px;">🪪</span> Scan Driver\'s License';
+    if (id === 'scanPlateBtn') btn.innerHTML = '<span style="font-size:20px;">🚗</span> Scan License Plate';
+    if (id === 'scanInsBtn') btn.innerHTML = '<span style="font-size:20px;">📋</span> Scan Insurance Card';
+    btn.style.background = '';
+  });
+  ['dlPhotoPreview','platePhotoPreview','insPhotoPreview'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+  state.scanPhotos = { dl: null, plate: null, insurance: null };
+  goToScreen(1);
+}
+
+// ═══════════════════════════
+//  TOAST
+// ═══════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// Init
+updateHeder(1);
+</script>
+</body>
+</html>
