@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Lato', sans-serif; background: #ECECEC; color: #1B2431; }
@@ -1085,6 +1086,24 @@ function renderPreCollisionMap() {
 
   // Build speed timeline
   renderSpeedTimeline();
+
+  // Capture map for email after tiles load
+  setTimeout(function() {
+    try {
+      if (typeof leafletImage !== 'undefined' && preCollisionMapInstance) {
+        leafletImage(preCollisionMapInstance, function(err, canvas) {
+          if (err || !canvas) { console.warn('leafletImage error:', err); return; }
+          var out = document.createElement('canvas');
+          var scale = Math.min(1, 480 / canvas.width);
+          out.width = Math.round(canvas.width * scale);
+          out.height = Math.round(canvas.height * scale);
+          out.getContext('2d').drawImage(canvas, 0, 0, out.width, out.height);
+          window._preCollisionMapImage = out.toDataURL('image/jpeg', 0.55);
+          console.log('Map captured for email:', out.width + 'x' + out.height, Math.round(window._preCollisionMapImage.length * 0.75 / 1024) + 'KB');
+        });
+      }
+    } catch(e) { console.warn('Map capture failed:', e); }
+  }, 1500);
 }
 
 function renderSpeedTimeline() {
@@ -1305,6 +1324,8 @@ async function sendEmailReport() {
     time: pt[3], speed: pt[2], lat: pt[0], lng: pt[1]
   }));
 
+  const mapImageData = window._preCollisionMapImage || null;
+
   try {
     const res = await fetch('/api/send-email', {
       method: 'POST',
@@ -1320,7 +1341,8 @@ async function sendEmailReport() {
         photoCount,
         photos: photoList,
         scanPhotos,
-        preCollisionTrack
+        preCollisionTrack,
+        mapImageData
       })
     });
 
