@@ -60,7 +60,6 @@
     .speed-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
     .speed-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -1086,36 +1085,6 @@ function renderPreCollisionMap() {
 
   // Build speed timeline
   renderSpeedTimeline();
-
-  // Auto-capture map image for email report after tiles load
-  preCollisionMapInstance.whenReady(() => {
-    setTimeout(async () => {
-      try {
-        if (typeof html2canvas !== 'undefined') {
-          const mapEl = document.getElementById('preCollisionMap');
-          const mapCanvas = await html2canvas(mapEl, { useCORS: true, logging: false, scale: 1 });
-          // Resize to max 560px wide to keep payload small
-          const MAX_W = 560;
-          let finalCanvas = mapCanvas;
-          if (mapCanvas.width > MAX_W) {
-            finalCanvas = document.createElement('canvas');
-            finalCanvas.width = MAX_W;
-            finalCanvas.height = Math.round(mapCanvas.height * MAX_W / mapCanvas.width);
-            finalCanvas.getContext('2d').drawImage(mapCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-          }
-          const dataUrl = finalCanvas.toDataURL('image/jpeg', 0.65);
-          const sizeKB = Math.round(dataUrl.length * 0.75 / 1024);
-          console.log('Map image captured:', finalCanvas.width + 'x' + finalCanvas.height, sizeKB + 'KB');
-          // Only store if under 400KB (prevents payload-too-large errors)
-          if (sizeKB < 400) {
-            window._preCollisionMapImage = dataUrl;
-          } else {
-            console.warn('Map image too large (' + sizeKB + 'KB), skipping');
-          }
-        }
-      } catch(e) { console.warn('Map pre-capture failed:', e); }
-    }, 1500);
-  });
 }
 
 function renderSpeedTimeline() {
@@ -1336,9 +1305,6 @@ async function sendEmailReport() {
     time: pt[3], speed: pt[2], lat: pt[0], lng: pt[1]
   }));
 
-  // Use pre-captured map image (auto-captured when summary screen rendered)
-  const mapImageData = window._preCollisionMapImage || null;
-
   try {
     const res = await fetch('/api/send-email', {
       method: 'POST',
@@ -1354,8 +1320,7 @@ async function sendEmailReport() {
         photoCount,
         photos: photoList,
         scanPhotos,
-        preCollisionTrack,
-        mapImageData
+        preCollisionTrack
       })
     });
 
